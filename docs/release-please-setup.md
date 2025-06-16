@@ -1,53 +1,123 @@
-# Release Please Setup Guide
+# GitHub Actions & Release Automation Setup Guide
 
-This document explains how to configure release-please for automated version management and releases.
+This document explains how to configure GitHub Actions permissions and automated release tools for the shimexe project.
 
-## Problem: GitHub Actions Permission Error
+## 🚨 Critical Permission Issues
 
-If you encounter this error:
+If you encounter these errors:
 
 ```
 GitHub Actions is not permitted to create or approve pull requests.
 Error: Process completed with exit code 1.
 ```
 
-This means GitHub Actions doesn't have permission to create Pull Requests in your repository.
+```
+remote: Permission to git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/...': The requested URL returned error: 403
+```
 
-## Solutions
+This means GitHub Actions doesn't have sufficient permissions in your repository.
 
-### Option 1: Enable GitHub Actions to Create PRs (Recommended)
+## 🔧 Release Tools in This Project
 
-1. Go to your repository settings
+We use **TWO** release automation tools:
+
+1. **release-please** - Google's general-purpose release tool
+2. **release-plz** - Rust-specific release tool
+
+Both tools can create PRs, so they need proper permissions.
+
+## 🛠️ Complete Solution (3 Steps Required)
+
+### Step 1: Repository Settings (CRITICAL)
+
+**You MUST enable this setting for any release automation to work:**
+
+1. Go to your repository **Settings**
 2. Navigate to **Actions** → **General**
 3. Scroll down to **Workflow permissions**
-4. Enable **"Allow GitHub Actions to create and approve pull requests"**
-5. Click **Save**
+4. Select **"Read and write permissions"**
+5. ✅ **Enable "Allow GitHub Actions to create and approve pull requests"**
+6. Click **Save**
 
-This is the simplest solution and works with the default `GITHUB_TOKEN`.
+**Without this setting, ALL release tools will fail with 403 errors.**
 
-### Option 2: Use Personal Access Token
+### Step 2: Personal Access Tokens (RECOMMENDED)
 
-If you prefer not to enable the repository setting, you can use a Personal Access Token:
+Even with repository settings enabled, using Personal Access Tokens provides better reliability:
 
+#### For release-please:
 1. **Create a Personal Access Token:**
    - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
    - Click "Generate new token (classic)"
-   - Give it a descriptive name like "Release Please Token"
+   - Name: "Release Please Token"
+   - Expiration: Choose appropriate duration
    - Select these scopes:
-     - `repo` (Full control of private repositories)
-     - `workflow` (Update GitHub Action workflows)
+     - ✅ `repo` (Full control of private repositories)
+     - ✅ `workflow` (Update GitHub Action workflows)
+     - ✅ `write:packages` (Upload packages to GitHub Package Registry)
 
-2. **Add the token as a repository secret:**
-   - Go to your repository settings
-   - Navigate to **Secrets and variables** → **Actions**
+2. **Add as repository secret:**
+   - Repository Settings → **Secrets and variables** → **Actions**
    - Click **New repository secret**
    - Name: `RELEASE_PLEASE_TOKEN`
-   - Value: Your personal access token
+   - Value: Your PAT
    - Click **Add secret**
 
-3. The workflow will automatically use this token when available.
+#### For release-plz:
+1. **Create another PAT** (or reuse the same one):
+   - Same scopes as above
+2. **Add as repository secret:**
+   - Name: `RELEASE_PLZ_TOKEN`
+   - Value: Your PAT
 
-## How Release Please Works
+### Step 3: Verify All Secrets
+
+Ensure you have these secrets configured:
+- ✅ `RELEASE_PLEASE_TOKEN` (for release-please)
+- ✅ `RELEASE_PLZ_TOKEN` (for release-plz)
+- ✅ `CARGO_REGISTRY_TOKEN` (for crates.io publishing)
+- ✅ `CHOCOLATEY_API_KEY` (for Chocolatey publishing)
+
+## 🔐 Workflow Permissions Explained
+
+All workflows now have explicit permissions configured:
+
+### CI Workflow (`ci.yml`)
+```yaml
+permissions:
+  contents: read        # Read repository contents
+  actions: read         # Read workflow status
+  security-events: write # Write security audit results
+```
+
+### Release Please (`release-please.yml`)
+```yaml
+permissions:
+  contents: write           # Create releases and tags
+  pull-requests: write      # Create and update PRs
+  issues: write            # Create and update issues
+  repository-projects: write # Update project boards
+```
+
+### Release PLZ (`release-plz.yml`)
+```yaml
+permissions:
+  contents: write           # Create releases and tags
+  pull-requests: write      # Create and update PRs
+  issues: write            # Create and update issues
+  repository-projects: write # Update project boards
+```
+
+### Release Build (`release.yml`)
+```yaml
+permissions:
+  contents: write    # Upload release assets
+  actions: read      # Read workflow status
+  id-token: write    # For OIDC authentication
+```
+
+## 🚀 How Release Automation Works
 
 1. **Commit Analysis**: Release-please analyzes commit messages following [Conventional Commits](https://www.conventionalcommits.org/)
 2. **Version Bumping**: Based on commit types, it determines the appropriate version bump:
@@ -90,7 +160,37 @@ Release-please will:
 - Create separate changelog entries
 - Release both crates when their versions change
 
-## Troubleshooting
+## 🔍 Troubleshooting Guide
+
+### 403 Permission Errors
+
+**Error**: `GitHub Actions is not permitted to create or approve pull requests`
+
+**Solutions** (try in order):
+1. ✅ Enable "Allow GitHub Actions to create and approve pull requests" in repository settings
+2. ✅ Verify workflow permissions are correctly set
+3. ✅ Create and configure Personal Access Tokens
+4. ✅ Check that PAT has correct scopes (`repo`, `workflow`, `write:packages`)
+5. ✅ Ensure PAT hasn't expired
+
+### Token Authentication Issues
+
+**Error**: `remote: Permission to git denied to github-actions[bot]`
+
+**Solutions**:
+1. Use Personal Access Token instead of `GITHUB_TOKEN`
+2. Verify token has `repo` scope
+3. Check token expiration date
+4. Ensure token is added as correct secret name
+
+### Workflow Conflicts
+
+**Problem**: Both release-please and release-plz running simultaneously
+
+**Solutions**:
+1. **Recommended**: Use only one release tool
+2. **Alternative**: Configure different trigger conditions
+3. **Current setup**: Both tools use different tokens to avoid conflicts
 
 ### "is not a package manifest" Error
 This usually means the workspace configuration is incorrect. Ensure:
@@ -99,15 +199,24 @@ This usually means the workspace configuration is incorrect. Ensure:
 - Paths in `.release-please-manifest.json` match actual crate directories
 
 ### No Release PR Created
-Release-please only creates PRs when it detects commits that should trigger a release:
+Release tools only create PRs when they detect commits that should trigger a release:
 - Make sure you're using conventional commit messages
 - Check that commits are on the `main` branch
 - Verify the workflow has proper permissions
+- Check workflow logs for detailed error messages
 
 ### Multiple Releases
 If you want to release only specific crates, you can:
 - Use path-based commit prefixes: `feat(shimexe-core): add new feature`
 - Manually edit the release PR to exclude certain crates
+
+### Debugging Steps
+
+1. **Check workflow logs** in Actions tab
+2. **Verify repository settings** are correct
+3. **Test with a simple conventional commit**
+4. **Check secret configuration**
+5. **Verify token permissions and expiration**
 
 ## Manual Release
 
