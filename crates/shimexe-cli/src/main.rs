@@ -99,13 +99,41 @@ fn main() -> Result<()> {
 
 /// Run the executable as a shim
 fn run_as_shim(shim_name: &str, args: &[String]) -> Result<()> {
-    let shim_dir = get_shim_directory(None)?;
-    let shim_file = shim_dir.join(format!("{}.shim.toml", shim_name));
+    // First, try to find the shim file in the same directory as the executable
+    let current_exe = env::current_exe()?;
+    let exe_dir = current_exe
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let local_shim_file = exe_dir.join(format!("{}.shim.toml", shim_name));
 
-    if !shim_file.exists() {
-        warn!("Shim file not found: {}", shim_file.display());
-        return Err(anyhow::anyhow!("Shim '{}' not found", shim_name));
-    }
+    let shim_file = if local_shim_file.exists() {
+        info!("Found local shim file: {}", local_shim_file.display());
+        local_shim_file
+    } else {
+        // Fallback to the default shim directory
+        let shim_dir = get_shim_directory(None)?;
+        let default_shim_file = shim_dir.join(format!("{}.shim.toml", shim_name));
+
+        if !default_shim_file.exists() {
+            warn!(
+                "Shim file not found in local directory: {}",
+                local_shim_file.display()
+            );
+            warn!(
+                "Shim file not found in default directory: {}",
+                default_shim_file.display()
+            );
+            return Err(anyhow::anyhow!(
+                "Shim '{}' not found. Searched in:\n  - {}\n  - {}",
+                shim_name,
+                local_shim_file.display(),
+                default_shim_file.display()
+            ));
+        }
+
+        info!("Found default shim file: {}", default_shim_file.display());
+        default_shim_file
+    };
 
     let runner = ShimRunner::from_file(&shim_file)?;
     let exit_code = runner.execute(args)?;
@@ -118,10 +146,9 @@ fn get_shim_directory(custom_dir: Option<PathBuf>) -> Result<PathBuf> {
     let shim_dir = if let Some(dir) = custom_dir {
         dir
     } else {
-        dirs::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not determine config directory"))?
-            .join("shimexe")
-            .join("shims")
+        dirs::home_dir()
+            .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
+            .join(".shimexe")
     };
 
     if !shim_dir.exists() {

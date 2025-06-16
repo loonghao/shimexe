@@ -93,6 +93,42 @@ shimexe supports powerful environment variable expansion:
   - `${HOME}` - User home directory
   - `${CONFIG_DIR}` - User configuration directory
 
+## How Shims Work
+
+shimexe creates standalone executable shims that can work independently when distributed:
+
+### Shim Architecture
+
+1. **Dual Configuration**: Each shim consists of two files:
+   - `<name>.exe` - The executable shim (copy of shimexe binary)
+   - `<name>.shim.toml` - The configuration file
+
+2. **Smart Configuration Lookup**: When a shim runs, it searches for configuration in this order:
+   - **Local**: Same directory as the executable (for portable distribution)
+   - **Default**: User's shim directory (`~/.shimexe/`)
+
+3. **Portable Distribution**: Shims can be copied to any location along with their `.shim.toml` files and will work independently without requiring shimexe to be installed on the target system.
+
+### Static Linking
+
+shimexe is built with static linking to minimize runtime dependencies:
+- **Windows**: Statically links MSVC runtime (`+crt-static`)
+- **No External Dependencies**: Shims work without requiring additional DLLs or runtime installations
+
+### Distribution Examples
+
+```bash
+# Create a shim
+shimexe add mytool --path "/path/to/tool" --args "--default-flag"
+
+# Copy both files for distribution
+cp ~/.shimexe/mytool.exe ./dist/
+cp ~/.shimexe/mytool.shim.toml ./dist/
+
+# The shim now works independently in ./dist/
+./dist/mytool.exe
+```
+
 ## CLI Commands
 
 ```bash

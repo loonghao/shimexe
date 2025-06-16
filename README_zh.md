@@ -92,6 +92,42 @@ shimexe 支持强大的环境变量扩展功能:
   - `${HOME}` - 用户主目录
   - `${CONFIG_DIR}` - 用户配置目录
 
+## Shim 工作原理
+
+shimexe 创建的独立可执行 shim 可以在分发时独立工作：
+
+### Shim 架构
+
+1. **双重配置**：每个 shim 由两个文件组成：
+   - `<name>.exe` - 可执行 shim（shimexe 二进制的副本）
+   - `<name>.shim.toml` - 配置文件
+
+2. **智能配置查找**：当 shim 运行时，按以下顺序搜索配置：
+   - **本地**：与可执行文件相同的目录（用于便携式分发）
+   - **默认**：用户的 shim 目录（`~/.shimexe/`）
+
+3. **便携式分发**：Shim 可以与其 `.shim.toml` 文件一起复制到任何位置，无需在目标系统上安装 shimexe 即可独立工作。
+
+### 静态链接
+
+shimexe 使用静态链接构建以最小化运行时依赖：
+- **Windows**：静态链接 MSVC 运行时（`+crt-static`）
+- **无外部依赖**：Shim 无需额外的 DLL 或运行时安装即可工作
+
+### 分发示例
+
+```bash
+# 创建 shim
+shimexe add mytool --path "/path/to/tool" --args "--default-flag"
+
+# 复制两个文件用于分发
+cp ~/.shimexe/mytool.exe ./dist/
+cp ~/.shimexe/mytool.shim.toml ./dist/
+
+# shim 现在可以在 ./dist/ 中独立工作
+./dist/mytool.exe
+```
+
 ## CLI 命令
 
 ```bash

@@ -35,7 +35,7 @@ impl ShimManager {
         config.to_file(&shim_file)?;
 
         // Create executable shim (copy of shimexe binary)
-        self.create_executable_shim(name)?;
+        self.create_executable_shim(name, config)?;
 
         debug!("Created shim file: {}", shim_file.display());
         Ok(())
@@ -52,6 +52,16 @@ impl ShimManager {
         }
 
         if exe_file.exists() {
+            // Also remove the local shim config file next to the executable
+            let exe_dir = exe_file
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."));
+            let local_shim_file = exe_dir.join(format!("{}.shim.toml", name));
+            if local_shim_file.exists() {
+                fs::remove_file(&local_shim_file)?;
+                debug!("Removed local shim config: {}", local_shim_file.display());
+            }
+
             fs::remove_file(&exe_file)?;
             debug!("Removed executable: {}", exe_file.display());
         }
@@ -116,7 +126,7 @@ impl ShimManager {
     }
 
     /// Create an executable shim by copying the current binary
-    fn create_executable_shim(&self, name: &str) -> Result<()> {
+    fn create_executable_shim(&self, name: &str, config: &ShimConfig) -> Result<()> {
         let current_exe = std::env::current_exe()?;
         let target_exe = self.get_executable_path(name);
 
@@ -131,7 +141,16 @@ impl ShimManager {
             fs::set_permissions(&target_exe, perms)?;
         }
 
+        // Create a local copy of the shim configuration next to the executable
+        // This allows the shim to work independently when copied to other locations
+        let exe_dir = target_exe
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."));
+        let local_shim_file = exe_dir.join(format!("{}.shim.toml", name));
+        config.to_file(&local_shim_file)?;
+
         debug!("Created executable shim: {}", target_exe.display());
+        debug!("Created local shim config: {}", local_shim_file.display());
         Ok(())
     }
 
