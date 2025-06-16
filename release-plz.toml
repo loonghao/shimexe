@@ -5,8 +5,7 @@ changelog_update = true
 git_release_enable = true
 # Enable automatic tag creation
 git_tag_enable = true
-# Enable automatic GitHub release creation
-release_enable = true
+
 
 # Changelog configuration
 [changelog]

@@ -52,7 +52,7 @@ fn main() {
 fn generate_icon_from_svg() {
     // Try to generate ICO from SVG using ImageMagick
     let output = Command::new("magick")
-        .args(&[
+        .args([
             "convert",
             "-background",
             "transparent",

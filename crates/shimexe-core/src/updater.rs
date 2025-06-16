@@ -40,10 +40,16 @@ impl ShimUpdater {
         let current_version = self.get_current_version()?;
 
         if self.is_newer_version(&current_version, &latest_version)? {
-            info!("Update available: {} -> {}", current_version, latest_version);
+            info!(
+                "Update available: {} -> {}",
+                current_version, latest_version
+            );
             Ok(Some(latest_version))
         } else {
-            debug!("No update needed. Current: {}, Latest: {}", current_version, latest_version);
+            debug!(
+                "No update needed. Current: {}, Latest: {}",
+                current_version, latest_version
+            );
             Ok(None)
         }
     }
@@ -59,8 +65,13 @@ impl ShimUpdater {
 
         // Download and install the new version
         match &self.config.provider {
-            UpdateProvider::Github { repo, asset_pattern, .. } => {
-                self.update_from_github(repo, asset_pattern, version).await?;
+            UpdateProvider::Github {
+                repo,
+                asset_pattern,
+                ..
+            } => {
+                self.update_from_github(repo, asset_pattern, version)
+                    .await?;
             }
             UpdateProvider::Https { base_url, .. } => {
                 self.update_from_https(base_url, version).await?;
@@ -94,7 +105,7 @@ impl ShimUpdater {
         }
 
         let last_check_time = std::fs::read_to_string(&last_check_file)
-            .map_err(|e| ShimError::Io(e))?
+            .map_err(ShimError::Io)?
             .trim()
             .parse::<u64>()
             .map_err(|_| ShimError::Config("Invalid last check timestamp".to_string()))?;
@@ -111,18 +122,23 @@ impl ShimUpdater {
     /// Get the latest version from the configured source
     async fn get_latest_version(&self) -> Result<String> {
         match &self.config.version_check {
-            VersionCheck::GithubLatest { repo, include_prerelease } => {
-                self.get_github_latest_version(repo, *include_prerelease).await
+            VersionCheck::GithubLatest {
+                repo,
+                include_prerelease,
+            } => {
+                self.get_github_latest_version(repo, *include_prerelease)
+                    .await
             }
-            VersionCheck::Http { url, json_path, regex_pattern } => {
-                self.get_http_version(url, json_path.as_deref(), regex_pattern.as_deref()).await
+            VersionCheck::Http {
+                url,
+                json_path,
+                regex_pattern,
+            } => {
+                self.get_http_version(url, json_path.as_deref(), regex_pattern.as_deref())
+                    .await
             }
-            VersionCheck::Semver { check_url, .. } => {
-                self.get_semver_version(check_url).await
-            }
-            VersionCheck::Command { command, args } => {
-                self.get_command_version(command, args)
-            }
+            VersionCheck::Semver { check_url, .. } => self.get_semver_version(check_url).await,
+            VersionCheck::Command { command, args } => self.get_command_version(command, args),
         }
     }
 
@@ -144,7 +160,9 @@ impl ShimUpdater {
             // Extract version using regex or simple parsing
             self.extract_version_from_output(&version_output)
         } else {
-            Err(ShimError::Config("Could not determine current version".to_string()))
+            Err(ShimError::Config(
+                "Could not determine current version".to_string(),
+            ))
         }
     }
 
@@ -156,7 +174,12 @@ impl ShimUpdater {
     }
 
     /// Update from GitHub releases
-    async fn update_from_github(&self, repo: &str, asset_pattern: &str, version: &str) -> Result<()> {
+    async fn update_from_github(
+        &self,
+        repo: &str,
+        asset_pattern: &str,
+        version: &str,
+    ) -> Result<()> {
         let download_url = self.build_github_download_url(repo, asset_pattern, version)?;
         self.download_and_install(&download_url).await
     }
@@ -167,7 +190,7 @@ impl ShimUpdater {
             .replace("{version}", version)
             .replace("{os}", std::env::consts::OS)
             .replace("{arch}", std::env::consts::ARCH);
-        
+
         self.download_and_install(&download_url).await
     }
 
@@ -180,20 +203,25 @@ impl ShimUpdater {
     /// Download and install from URL
     async fn download_and_install(&self, url: &str) -> Result<()> {
         info!("Downloading from: {}", url);
-        
+
         // TODO: Implement actual download and installation logic
         // This would involve:
         // 1. Download the file to a temporary location
         // 2. Verify checksums if available
         // 3. Replace the current executable
         // 4. Set proper permissions
-        
+
         warn!("Download and install not yet implemented");
         Ok(())
     }
 
     /// Build GitHub download URL
-    fn build_github_download_url(&self, repo: &str, asset_pattern: &str, version: &str) -> Result<String> {
+    fn build_github_download_url(
+        &self,
+        repo: &str,
+        asset_pattern: &str,
+        version: &str,
+    ) -> Result<String> {
         let asset_name = asset_pattern
             .replace("{version}", version)
             .replace("{os}", std::env::consts::OS)
@@ -206,14 +234,23 @@ impl ShimUpdater {
     }
 
     /// Get latest version from GitHub API
-    async fn get_github_latest_version(&self, _repo: &str, _include_prerelease: bool) -> Result<String> {
+    async fn get_github_latest_version(
+        &self,
+        _repo: &str,
+        _include_prerelease: bool,
+    ) -> Result<String> {
         // TODO: Implement GitHub API call
         warn!("GitHub version check not yet implemented");
         Ok("1.0.0".to_string())
     }
 
     /// Get version from HTTP endpoint
-    async fn get_http_version(&self, _url: &str, _json_path: Option<&str>, _regex_pattern: Option<&str>) -> Result<String> {
+    async fn get_http_version(
+        &self,
+        _url: &str,
+        _json_path: Option<&str>,
+        _regex_pattern: Option<&str>,
+    ) -> Result<String> {
         // TODO: Implement HTTP version check
         warn!("HTTP version check not yet implemented");
         Ok("1.0.0".to_string())
@@ -237,7 +274,9 @@ impl ShimUpdater {
             let version_output = String::from_utf8_lossy(&output.stdout);
             self.extract_version_from_output(&version_output)
         } else {
-            Err(ShimError::ProcessExecution("Version command failed".to_string()))
+            Err(ShimError::ProcessExecution(
+                "Version command failed".to_string(),
+            ))
         }
     }
 
@@ -246,18 +285,20 @@ impl ShimUpdater {
         // Simple regex to extract version numbers
         let re = regex::Regex::new(r"(\d+\.\d+\.\d+)")
             .map_err(|e| ShimError::Config(format!("Regex error: {}", e)))?;
-        
+
         if let Some(captures) = re.captures(output) {
             Ok(captures[1].to_string())
         } else {
-            Err(ShimError::Config("Could not extract version from output".to_string()))
+            Err(ShimError::Config(
+                "Could not extract version from output".to_string(),
+            ))
         }
     }
 
     /// Run a command
     fn run_command(&self, command: &str, context: &str) -> Result<()> {
         debug!("Running {} command: {}", context, command);
-        
+
         let status = std::process::Command::new("sh")
             .arg("-c")
             .arg(command)
@@ -267,7 +308,10 @@ impl ShimUpdater {
         if status.success() {
             Ok(())
         } else {
-            Err(ShimError::ProcessExecution(format!("{} command failed", context)))
+            Err(ShimError::ProcessExecution(format!(
+                "{} command failed",
+                context
+            )))
         }
     }
 
@@ -283,8 +327,7 @@ impl ShimUpdater {
             .map_err(|_| ShimError::Config("System time error".to_string()))?
             .as_secs();
 
-        std::fs::write(self.get_last_check_file(), now.to_string())
-            .map_err(|e| ShimError::Io(e))?;
+        std::fs::write(self.get_last_check_file(), now.to_string()).map_err(ShimError::Io)?;
 
         Ok(())
     }
@@ -295,7 +338,6 @@ mod tests {
     use super::*;
     use crate::config::{AutoUpdate, UpdateProvider, VersionCheck};
     use tempfile::NamedTempFile;
-    use std::io::Write;
 
     fn create_test_auto_update() -> AutoUpdate {
         AutoUpdate {
@@ -362,9 +404,14 @@ mod tests {
             temp_exe.path().to_path_buf(),
         );
 
-        let url = updater.build_github_download_url("test/repo", "app-{version}-{os}-{arch}", "1.0.0").unwrap();
-        let expected = format!("https://github.com/test/repo/releases/download/v1.0.0/app-1.0.0-{}-{}",
-                              std::env::consts::OS, std::env::consts::ARCH);
+        let url = updater
+            .build_github_download_url("test/repo", "app-{version}-{os}-{arch}", "1.0.0")
+            .unwrap();
+        let expected = format!(
+            "https://github.com/test/repo/releases/download/v1.0.0/app-1.0.0-{}-{}",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        );
         assert_eq!(url, expected);
     }
 
@@ -381,12 +428,27 @@ mod tests {
         );
 
         // Test various version output formats
-        assert_eq!(updater.extract_version_from_output("version 1.2.3").unwrap(), "1.2.3");
-        assert_eq!(updater.extract_version_from_output("v1.2.3").unwrap(), "1.2.3");
-        assert_eq!(updater.extract_version_from_output("app 1.2.3 (build 123)").unwrap(), "1.2.3");
+        assert_eq!(
+            updater
+                .extract_version_from_output("version 1.2.3")
+                .unwrap(),
+            "1.2.3"
+        );
+        assert_eq!(
+            updater.extract_version_from_output("v1.2.3").unwrap(),
+            "1.2.3"
+        );
+        assert_eq!(
+            updater
+                .extract_version_from_output("app 1.2.3 (build 123)")
+                .unwrap(),
+            "1.2.3"
+        );
 
         // Test invalid format
-        assert!(updater.extract_version_from_output("no version here").is_err());
+        assert!(updater
+            .extract_version_from_output("no version here")
+            .is_err());
     }
 
     #[test]
@@ -402,7 +464,10 @@ mod tests {
         );
 
         let last_check_file = updater.get_last_check_file();
-        assert_eq!(last_check_file, temp_shim.path().with_extension("last_check"));
+        assert_eq!(
+            last_check_file,
+            temp_shim.path().with_extension("last_check")
+        );
     }
 
     #[test]

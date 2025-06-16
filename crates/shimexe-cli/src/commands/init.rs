@@ -72,10 +72,7 @@ impl InitCommand {
                 description: Some("Example shim with environment variables".to_string()),
                 version: Some("1.0.0".to_string()),
                 author: Some("shimexe".to_string()),
-                tags: vec!["example", "env"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                tags: ["example", "env"].iter().map(|s| s.to_string()).collect(),
             },
             auto_update: None,
         };
