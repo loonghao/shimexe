@@ -1,0 +1,43 @@
+{
+  "release-type": "rust",
+  "packages": {
+    ".": {
+      "release-type": "rust",
+      "package-name": "shimexe",
+      "changelog-sections": [
+        {"type": "feat", "section": "Features"},
+        {"type": "fix", "section": "Bug Fixes"},
+        {"type": "perf", "section": "Performance Improvements"},
+        {"type": "revert", "section": "Reverts"},
+        {"type": "docs", "section": "Documentation"},
+        {"type": "style", "section": "Styles", "hidden": true},
+        {"type": "refactor", "section": "Code Refactoring"},
+        {"type": "test", "section": "Tests", "hidden": true},
+        {"type": "build", "section": "Build System", "hidden": true},
+        {"type": "ci", "section": "Continuous Integration", "hidden": true}
+      ]
+    },
+    "crates/shimexe-core": {
+      "release-type": "rust",
+      "package-name": "shimexe-core",
+      "changelog-sections": [
+        {"type": "feat", "section": "Features"},
+        {"type": "fix", "section": "Bug Fixes"},
+        {"type": "perf", "section": "Performance Improvements"},
+        {"type": "revert", "section": "Reverts"},
+        {"type": "docs", "section": "Documentation"},
+        {"type": "style", "section": "Styles", "hidden": true},
+        {"type": "refactor", "section": "Code Refactoring"},
+        {"type": "test", "section": "Tests", "hidden": true},
+        {"type": "build", "section": "Build System", "hidden": true},
+        {"type": "ci", "section": "Continuous Integration", "hidden": true}
+      ]
+    }
+  },
+  "bootstrap-sha": "main",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "draft": false,
+  "prerelease": false,
+  "include-v-in-tag": true
+}

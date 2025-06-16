@@ -1,34 +1,44 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release'
+        required: true
+        type: string
+      upload_url:
+        description: 'Upload URL for the release'
+        required: false
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  create-release:
-    name: Create Release
+  get-release-info:
+    name: Get Release Info
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      upload_url: ${{ steps.get_release.outputs.upload_url }}
+      tag_name: ${{ steps.get_release.outputs.tag_name }}
     steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+    - name: Get Release Info
+      id: get_release
+      run: |
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "upload_url=${{ github.event.release.upload_url }}" >> $GITHUB_OUTPUT
+          echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "upload_url=${{ inputs.upload_url }}" >> $GITHUB_OUTPUT
+          echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+        fi
 
   build-and-upload:
     name: Build and Upload
-    needs: create-release
+    needs: get-release-info
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -89,7 +99,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        upload_url: ${{ needs.get-release-info.outputs.upload_url }}
         asset_path: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
         asset_name: ${{ matrix.asset_name }}
         asset_content_type: application/octet-stream
