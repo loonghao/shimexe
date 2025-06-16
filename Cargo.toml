@@ -1,0 +1,56 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Hal <hal.long@outlook.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/loonghao/shimexe"
+homepage = "https://github.com/loonghao/shimexe"
+documentation = "https://docs.rs/shimexe"
+keywords = ["shim", "executable", "wrapper", "cross-platform", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+description = "A modern, cross-platform executable shim manager with environment variable expansion and TOML configuration support"
+
+[workspace.dependencies]
+# CLI and argument parsing
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Environment and path handling
+shellexpand = "3.1"
+dirs = "5.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Cross-platform process handling
+which = "6.0"
+
+# HTTP client and async
+reqwest = { version = "0.12", features = ["json"] }
+regex = "1.10"
+async-trait = "0.1"
+
+# Testing
+tempfile = "3.8"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
