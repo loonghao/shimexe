@@ -1,4 +1,5 @@
 {
   ".": "0.1.0",
+  "crates/shimexe-cli": "0.1.0",
   "crates/shimexe-core": "0.1.0"
 }
