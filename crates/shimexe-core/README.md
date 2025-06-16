@@ -48,15 +48,14 @@ shimexe-core = "0.1.0"
 ```rust
 use shimexe_core::prelude::*;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load shim configuration
     let config = ShimConfig::from_file("path/to/shim.toml")?;
-    
+
     // Create and run shim
-    let runner = ShimRunner::new(config);
-    let exit_code = runner.run(&["arg1", "arg2"]).await?;
-    
+    let runner = ShimRunner::from_config(config)?;
+    let exit_code = runner.execute(&["arg1", "arg2"])?;
+
     std::process::exit(exit_code);
 }
 ```
@@ -66,42 +65,63 @@ async fn main() -> Result<()> {
 ```toml
 # shim.toml
 [shim]
-target = "${HOME}/bin/my-tool"
+name = "my-tool"
+path = "${HOME}/bin/my-tool"
 args = ["--config", "${CONFIG_DIR}/config.yaml"]
+cwd = "/optional/working/directory"
 
-[shim.env]
+[env]
 PATH = "${PATH}:${HOME}/bin"
 MY_TOOL_HOME = "${HOME}/.my-tool"
 
-[shim.metadata]
-name = "my-tool"
-version = "1.0.0"
+[metadata]
 description = "My awesome tool"
+version = "1.0.0"
+author = "Your Name"
+tags = ["tool", "utility"]
 ```
 
-### Advanced Usage
+### Creating Shim Configurations
 
 ```rust
-use shimexe_core::*;
+use shimexe_core::{ShimConfig, ShimCore};
+use std::collections::HashMap;
 
-// Custom shim runner with additional features
-struct CustomRunner {
-    inner: ShimRunner,
-}
+// Create a shim programmatically
+let config = ShimConfig {
+    shim: ShimCore {
+        name: "my-tool".to_string(),
+        path: "/usr/bin/my-tool".to_string(),
+        args: vec!["--default-arg".to_string()],
+        cwd: Some("/working/directory".to_string()),
+    },
+    env: {
+        let mut env = HashMap::new();
+        env.insert("MY_VAR".to_string(), "value".to_string());
+        env
+    },
+    metadata: Default::default(),
+    args: Default::default(),
+    auto_update: None,
+};
 
-impl CustomizableShimRunner for CustomRunner {
-    fn pre_run(&mut self, args: &[String]) -> Result<()> {
-        // Custom pre-execution logic
-        println!("Running with args: {:?}", args);
-        Ok(())
-    }
-    
-    fn post_run(&mut self, exit_code: i32) -> Result<()> {
-        // Custom post-execution logic
-        println!("Finished with exit code: {}", exit_code);
-        Ok(())
-    }
-}
+// Save to file
+config.to_file("my-tool.shim.toml")?;
+```
+
+### Environment Variable Expansion
+
+```rust
+use shimexe_core::utils::expand_env_vars;
+
+// Expand environment variables
+let expanded = expand_env_vars("${HOME}/bin/${EXE_EXT}")?;
+
+// Built-in variables:
+// ${EXE_EXT} - Platform-specific executable extension (.exe on Windows)
+// ${PATH_SEP} - Platform-specific path separator
+// ${HOME} - User home directory
+// ${CONFIG_DIR} - User configuration directory
 ```
 
 ## API Documentation

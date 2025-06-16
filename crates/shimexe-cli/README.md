@@ -55,7 +55,7 @@ This creates the configuration directory and sets up the basic structure.
 ### 2. Add your first shim
 
 ```bash
-shimexe add my-tool --target /path/to/my-tool --args "--config /path/to/config.yaml"
+shimexe add my-tool --path /path/to/my-tool --args "--config /path/to/config.yaml"
 ```
 
 ### 3. List your shims
@@ -81,7 +81,7 @@ shimexe add <name> --target <path> [--args <args>] [--env <key=value>]
 
 **Example:**
 ```bash
-shimexe add node --target /usr/local/bin/node --env NODE_ENV=development
+shimexe add node --path /usr/local/bin/node --env NODE_ENV=development
 ```
 
 ### `shimexe remove`
@@ -140,20 +140,23 @@ Shims are configured using TOML files stored in `~/.shimexe/shims/`. Each shim h
 ### Example Configuration
 
 ```toml
-# ~/.shimexe/shims/my-tool.shim.toml
+# ~/.shimexe/my-tool.shim.toml
 [shim]
-target = "${HOME}/bin/my-tool"
+name = "my-tool"
+path = "${HOME}/bin/my-tool"
 args = ["--config", "${CONFIG_DIR}/my-tool.yaml", "--verbose"]
+cwd = "/optional/working/directory"
 
-[shim.env]
+[env]
 PATH = "${PATH}:${HOME}/bin"
 MY_TOOL_HOME = "${HOME}/.my-tool"
 LOG_LEVEL = "info"
 
-[shim.metadata]
-name = "my-tool"
-version = "1.2.3"
+[metadata]
 description = "My awesome development tool"
+version = "1.2.3"
+author = "Your Name"
+tags = ["tool", "development"]
 
 [shim.auto_update]
 enabled = true
