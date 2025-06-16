@@ -1,6 +1,16 @@
 name: Release
 
+# This workflow handles binary releases and distribution
+# - Triggered by tag pushes (v*) or release events
+# - Builds cross-platform binaries and uploads to GitHub releases
+# - Publishes to Chocolatey package manager
+#
+# Note: Crates.io publishing is handled by release-plz.yml workflow
+
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
   workflow_dispatch:
@@ -27,8 +37,9 @@ jobs:
     name: Get Release Info
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.get_release.outputs.upload_url }}
+      upload_url: ${{ steps.get_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
       tag_name: ${{ steps.get_release.outputs.tag_name }}
+      create_release: ${{ steps.get_release.outputs.create_release }}
     steps:
     - name: Get Release Info
       id: get_release
@@ -36,10 +47,38 @@ jobs:
         if [ "${{ github.event_name }}" = "release" ]; then
           echo "upload_url=${{ github.event.release.upload_url }}" >> $GITHUB_OUTPUT
           echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event_name }}" = "push" ]; then
+          # Extract tag name from ref (refs/tags/v1.0.0 -> v1.0.0)
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          # For tag pushes, we need to create a release first
+          echo "create_release=true" >> $GITHUB_OUTPUT
         elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "upload_url=${{ inputs.upload_url }}" >> $GITHUB_OUTPUT
           echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
         fi
+
+    - name: Create Release
+      id: create_release
+      if: steps.get_release.outputs.create_release == 'true'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_release.outputs.tag_name }}
+        release_name: Release ${{ steps.get_release.outputs.tag_name }}
+        draft: false
+        prerelease: false
+        body: |
+          Release ${{ steps.get_release.outputs.tag_name }}
+
+          ## Changes
+          See [CHANGELOG.md](https://github.com/loonghao/shimexe/blob/main/CHANGELOG.md) for details.
+
+          ## Downloads
+          - **Windows**: shimexe-windows-x86_64.exe
+          - **Linux**: shimexe-linux-x86_64 or shimexe-linux-x86_64-musl
+          - **macOS**: shimexe-macos-x86_64 or shimexe-macos-aarch64
 
   build-and-upload:
     name: Build and Upload
@@ -109,28 +148,12 @@ jobs:
         asset_name: ${{ matrix.asset_name }}
         asset_content_type: application/octet-stream
 
-  publish-crates:
-    name: Publish to crates.io
-    needs: build-and-upload
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Publish shimexe-core
-      run: cargo publish -p shimexe-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-    
-    - name: Wait for crates.io
-      run: sleep 30
-    
-    - name: Publish shimexe
-      run: cargo publish -p shimexe --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
 
   chocolatey:
     name: Publish to Chocolatey
     needs: build-and-upload
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -143,7 +166,8 @@ jobs:
     
     - name: Create Chocolatey Package
       run: |
-        $version = "${{ github.ref }}" -replace "refs/tags/v", ""
+        # Get version from tag name, removing 'v' prefix
+        $version = "${{ needs.get-release-info.outputs.tag_name }}" -replace "^v", ""
         mkdir chocolatey
         cd chocolatey
         
