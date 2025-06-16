@@ -145,9 +145,9 @@ pub enum VersionCheck {
 impl ShimConfig {
     /// Load shim configuration from a TOML file
     pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
-        let content = std::fs::read_to_string(&path).map_err(|e| ShimError::Io(e))?;
+        let content = std::fs::read_to_string(&path).map_err(ShimError::Io)?;
 
-        let config: ShimConfig = toml::from_str(&content).map_err(|e| ShimError::TomlParse(e))?;
+        let config: ShimConfig = toml::from_str(&content).map_err(ShimError::TomlParse)?;
 
         config.validate()?;
         Ok(config)
@@ -155,9 +155,9 @@ impl ShimConfig {
 
     /// Save shim configuration to a TOML file
     pub fn to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<()> {
-        let content = toml::to_string_pretty(self).map_err(|e| ShimError::TomlSerialize(e))?;
+        let content = toml::to_string_pretty(self).map_err(ShimError::TomlSerialize)?;
 
-        std::fs::write(path, content).map_err(|e| ShimError::Io(e))?;
+        std::fs::write(path, content).map_err(ShimError::Io)?;
 
         Ok(())
     }
@@ -191,7 +191,7 @@ impl ShimConfig {
         }
 
         // Expand environment variables
-        for (_, value) in &mut self.env {
+        for value in self.env.values_mut() {
             *value = expand_env_vars(value)?;
         }
 

@@ -15,12 +15,12 @@ impl ListCommand {
     pub fn execute(&self, shim_dir: Option<PathBuf>) -> Result<()> {
         let manager = ShimManager::new(shim_dir)?;
         let shims = manager.list_shims()?;
-        
+
         if shims.is_empty() {
             println!("No shims found.");
             return Ok(());
         }
-        
+
         if self.detailed {
             for (name, config) in shims {
                 println!("📦 {}", name);
@@ -45,7 +45,7 @@ impl ListCommand {
                 println!("  {} -> {}", name, config.shim.path);
             }
         }
-        
+
         Ok(())
     }
 }

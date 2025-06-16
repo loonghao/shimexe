@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 
@@ -8,7 +7,6 @@ use crate::error::{Result, ShimError};
 /// Template engine for processing dynamic configuration
 pub struct TemplateEngine {
     user_args: Vec<String>,
-    env_cache: HashMap<String, String>,
 }
 
 /// Template-based argument configuration
@@ -40,19 +38,14 @@ pub struct ArgsConfig {
 }
 
 /// Argument processing modes
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ArgsMode {
+    #[default]
     Template, // Use template-based processing
-    Merge,    // Combine default + user args
-    Replace,  // User args replace default
-    Prepend,  // User args + default args
-}
-
-impl Default for ArgsMode {
-    fn default() -> Self {
-        ArgsMode::Template
-    }
+    Merge,   // Combine default + user args
+    Replace, // User args replace default
+    Prepend, // User args + default args
 }
 
 impl Default for ArgsConfig {
@@ -71,10 +64,7 @@ impl Default for ArgsConfig {
 impl TemplateEngine {
     /// Create a new template engine with user arguments
     pub fn new(user_args: Vec<String>) -> Self {
-        Self {
-            user_args,
-            env_cache: HashMap::new(),
-        }
+        Self { user_args }
     }
 
     /// Process arguments based on configuration

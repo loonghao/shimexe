@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info};
 
-use shimexe_core::{ShimConfig, ShimRunner};
+use shimexe_core::ShimConfig;
 
 /// Manages shim files and operations
 pub struct ShimManager {
@@ -102,13 +102,6 @@ impl ShimManager {
         }
 
         self.add_shim(name, config)
-    }
-
-    /// Validate a shim
-    pub fn validate_shim(&self, name: &str) -> Result<()> {
-        let config = self.get_shim_config(name)?;
-        let runner = ShimRunner::from_config(config)?;
-        Ok(runner.validate()?)
     }
 
     /// Get the path to a shim file
