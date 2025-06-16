@@ -16,7 +16,7 @@ name = "shimexe"
 path = "src/main.rs"
 
 [dependencies]
-shimexe-core = { version = "0.1.1", path = "../shimexe-core" }
+shimexe-core = { version = "0.1.2", path = "../shimexe-core" }
 clap.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
