@@ -28,7 +28,7 @@ thiserror = "1.0"
 
 # Environment and path handling
 shellexpand = "3.1"
-dirs = "5.0"
+dirs = "6.0"
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
