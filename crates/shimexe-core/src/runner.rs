@@ -120,7 +120,7 @@ impl ShimRunner {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let metadata = executable_path.metadata().map_err(|e| ShimError::Io(e))?;
+            let metadata = executable_path.metadata().map_err(ShimError::Io)?;
             let permissions = metadata.permissions();
 
             if permissions.mode() & 0o111 == 0 {
