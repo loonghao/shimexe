@@ -1,0 +1,186 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+  build-and-upload:
+    name: Build and Upload
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: shimexe
+            asset_name: shimexe-linux-x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: shimexe
+            asset_name: shimexe-linux-x86_64-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: shimexe.exe
+            asset_name: shimexe-windows-x86_64.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: shimexe
+            asset_name: shimexe-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: shimexe
+            asset_name: shimexe-macos-aarch64
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install musl tools
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      run: sudo apt-get install -y musl-tools
+
+    - name: Install ImageMagick (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        winget install ImageMagick.ImageMagick
+        $env:PATH += ";C:\Program Files\ImageMagick-7.1.1-Q16-HDRI"
+        echo "C:\Program Files\ImageMagick-7.1.1-Q16-HDRI" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Install ImageMagick (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get install -y imagemagick
+
+    - name: Install ImageMagick (macOS)
+      if: runner.os == 'macOS'
+      run: brew install imagemagick
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }} --bin shimexe
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: application/octet-stream
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Publish shimexe-core
+      run: cargo publish -p shimexe-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    
+    - name: Wait for crates.io
+      run: sleep 30
+    
+    - name: Publish shimexe
+      run: cargo publish -p shimexe --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  chocolatey:
+    name: Publish to Chocolatey
+    needs: build-and-upload
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Chocolatey
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+    
+    - name: Create Chocolatey Package
+      run: |
+        $version = "${{ github.ref }}" -replace "refs/tags/v", ""
+        mkdir chocolatey
+        cd chocolatey
+        
+        # Create nuspec file
+        @"
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+          <metadata>
+            <id>shimexe</id>
+            <version>$version</version>
+            <title>shimexe</title>
+            <authors>Hal</authors>
+            <owners>loonghao</owners>
+            <licenseUrl>https://github.com/loonghao/shimexe/blob/main/LICENSE</licenseUrl>
+            <projectUrl>https://github.com/loonghao/shimexe</projectUrl>
+            <requireLicenseAcceptance>false</requireLicenseAcceptance>
+            <description>A modern, cross-platform executable shim manager with environment variable expansion and TOML configuration support</description>
+            <summary>Cross-platform executable shim manager</summary>
+            <tags>shim executable wrapper cross-platform cli</tags>
+          </metadata>
+          <files>
+            <file src="tools\**" target="tools" />
+          </files>
+        </package>
+        "@ | Out-File -FilePath "shimexe.nuspec" -Encoding UTF8
+        
+        # Create tools directory and install script
+        mkdir tools
+        @"
+        `$ErrorActionPreference = 'Stop'
+        `$packageName = 'shimexe'
+        `$url64 = 'https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-windows-x86_64.exe'
+        `$checksum64 = ''
+        
+        `$packageArgs = @{
+          packageName   = `$packageName
+          fileType      = 'exe'
+          url64bit      = `$url64
+          checksum64    = `$checksum64
+          checksumType64= 'sha256'
+          silentArgs    = ''
+          validExitCodes= @(0)
+          softwareName  = 'shimexe*'
+          destination   = "`$(Split-Path -parent `$MyInvocation.MyCommand.Definition)"
+        }
+        
+        Install-ChocolateyZipPackage @packageArgs
+        "@ | Out-File -FilePath "tools\chocolateyinstall.ps1" -Encoding UTF8
+        
+        choco pack
+    
+    - name: Push to Chocolatey
+      run: |
+        cd chocolatey
+        choco push shimexe.*.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
