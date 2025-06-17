@@ -43,29 +43,48 @@ jobs:
       run: |
         $version = "${{ steps.get_version.outputs.version }}"
         $baseUrl = "https://github.com/loonghao/shimexe/releases/download/v$version"
-        
+
         # Get Windows x64 zip hash for Chocolatey and Scoop
         $zipUrl = "$baseUrl/shimexe-x86_64-pc-windows-msvc.zip"
-        
-        try {
-          $response = Invoke-WebRequest -Uri $zipUrl -Method Head -UseBasicParsing
-          if ($response.StatusCode -eq 200) {
-            $tempFile = [System.IO.Path]::GetTempFileName()
-            Invoke-WebRequest -Uri $zipUrl -OutFile $tempFile -UseBasicParsing
-            $hash = Get-FileHash -Path $tempFile -Algorithm SHA256
-            Remove-Item $tempFile -Force
-            
-            echo "zip_hash=$($hash.Hash)" >> $env:GITHUB_OUTPUT
-            echo "zip_url=$zipUrl" >> $env:GITHUB_OUTPUT
-            echo "Windows ZIP hash: $($hash.Hash)"
-          } else {
-            echo "Failed to get ZIP file: HTTP $($response.StatusCode)"
-            exit 1
+
+        # Wait for the release to be available with retry logic
+        $maxRetries = 10
+        $retryCount = 0
+        $zipHash = ""
+
+        do {
+          Start-Sleep -Seconds 30
+          $retryCount++
+          Write-Host "Attempt $retryCount of $maxRetries to download release..."
+
+          try {
+            $response = Invoke-WebRequest -Uri $zipUrl -Method Head -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+              $tempFile = [System.IO.Path]::GetTempFileName()
+              Invoke-WebRequest -Uri $zipUrl -OutFile $tempFile -UseBasicParsing
+              $hash = Get-FileHash -Path $tempFile -Algorithm SHA256
+              Remove-Item $tempFile -Force
+              $zipHash = $hash.Hash
+
+              echo "zip_hash=$zipHash" >> $env:GITHUB_OUTPUT
+              echo "zip_url=$zipUrl" >> $env:GITHUB_OUTPUT
+              Write-Host "Successfully downloaded and calculated checksum: $zipHash"
+              break
+            } else {
+              Write-Warning "Attempt $retryCount failed: HTTP $($response.StatusCode)"
+              if ($retryCount -eq $maxRetries) {
+                Write-Error "Failed to get release after $maxRetries attempts"
+                exit 1
+              }
+            }
+          } catch {
+            Write-Warning "Attempt $retryCount failed: $_"
+            if ($retryCount -eq $maxRetries) {
+              Write-Error "Failed to download release after $maxRetries attempts"
+              exit 1
+            }
           }
-        } catch {
-          echo "Error getting ZIP hash: $_"
-          exit 1
-        }
+        } while ($retryCount -lt $maxRetries)
 
     - name: Update Chocolatey package
       run: |
