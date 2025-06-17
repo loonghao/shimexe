@@ -4,6 +4,7 @@
 //! with environment variable expansion and TOML configuration support.
 
 pub mod config;
+pub mod downloader;
 pub mod error;
 pub mod runner;
 pub mod template;
@@ -12,6 +13,7 @@ pub mod updater;
 pub mod utils;
 
 pub use config::{AutoUpdate, ShimConfig, ShimCore, ShimMetadata, UpdateProvider, VersionCheck};
+pub use downloader::Downloader;
 pub use error::{Result, ShimError};
 pub use runner::ShimRunner;
 pub use template::{ArgsConfig, ArgsMode, TemplateEngine};
