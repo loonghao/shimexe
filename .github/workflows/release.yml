@@ -236,7 +236,7 @@ jobs:
         sed -i "s/\$Version = \"latest\"/\$Version = \"$version\"/" scripts/install.ps1
 
     - name: Upload install scripts to release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           scripts/install.sh
