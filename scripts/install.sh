@@ -110,7 +110,7 @@ install_shimexe() {
 
     # Construct download URL using correct release file naming
     archive_name=$(get_release_filename "$platform")
-    download_url="${SHIMEXE_BASE_URL}/download/shimexe-v${version}/${archive_name}"
+    download_url="${SHIMEXE_BASE_URL}/download/v${version}/${archive_name}"
     
     # Create temporary directory
     temp_dir=$(mktemp -d)

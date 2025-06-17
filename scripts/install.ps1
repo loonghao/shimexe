@@ -88,7 +88,7 @@ function Install-Shimexe {
 
     # Construct download URL using correct release file naming
     $archiveName = Get-ReleaseFileName -Platform $platform
-    $downloadUrl = "$BaseUrl/download/shimexe-v$Version/$archiveName"
+    $downloadUrl = "$BaseUrl/download/v$Version/$archiveName"
     
     # Create temporary directory
     $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
