@@ -56,13 +56,32 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # Cache ImageMagick installation to speed up builds
+    - name: Cache ImageMagick (Linux)
+      if: runner.os == 'Linux'
+      uses: actions/cache@v4
+      with:
+        path: /usr/bin/convert
+        key: imagemagick-linux-${{ runner.os }}
+
+    - name: Cache ImageMagick (macOS)
+      if: runner.os == 'macOS'
+      uses: actions/cache@v4
+      with:
+        path: /opt/homebrew/bin/convert
+        key: imagemagick-macos-${{ runner.os }}
+
     - name: Install dependencies
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
+          if [ ! -f "/usr/bin/convert" ]; then
+            sudo apt-get update
+            sudo apt-get install -y imagemagick
+          fi
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          brew install imagemagick
+          if [ ! -f "/opt/homebrew/bin/convert" ]; then
+            brew install imagemagick
+          fi
         fi
       shell: bash
 
@@ -71,14 +90,6 @@ jobs:
       uses: crazy-max/ghaction-chocolatey@v3
       with:
         args: install imagemagick
-
-    - name: Check formatting
-      if: matrix.platform.rust == 'stable' && matrix.platform.target == 'x86_64-unknown-linux-gnu'
-      run: cargo fmt --all -- --check
-
-    - name: Run clippy
-      if: matrix.platform.rust == 'stable' && matrix.platform.target == 'x86_64-unknown-linux-gnu'
-      run: cargo clippy --all-targets --all-features -- -D warnings
 
     - name: Run tests and build
       uses: houseabsolute/actions-rust-cross@v1
@@ -99,6 +110,20 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-quality-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-quality-
+          ${{ runner.os }}-cargo-
 
     - name: Check formatting
       run: cargo fmt --all -- --check

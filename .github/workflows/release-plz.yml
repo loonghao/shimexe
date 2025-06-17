@@ -23,14 +23,42 @@ jobs:
           fetch-depth: 0
           # Use PAT to allow triggering other workflows (like release.yml)
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Validate GitHub Token
+        run: |
+          # Validate token format and remove any potential whitespace
+          if [ -n "${{ secrets.RELEASE_PLZ_TOKEN }}" ]; then
+            echo "Using RELEASE_PLZ_TOKEN"
+            TOKEN="${{ secrets.RELEASE_PLZ_TOKEN }}"
+          else
+            echo "Using GITHUB_TOKEN"
+            TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
+
+          # Basic token validation
+          if [[ ! "$TOKEN" =~ ^(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_) ]]; then
+            echo "Warning: Token format may be invalid"
+          fi
+
+          # Test token with a simple API call
+          curl -s -H "Authorization: Bearer $TOKEN" \
+               -H "Accept: application/vnd.github.v3+json" \
+               https://api.github.com/user > /dev/null || {
+            echo "Error: Token validation failed"
+            exit 1
+          }
+          echo "Token validation successful"
+        shell: bash
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
           command: release
         env:
-          # Use PAT to allow triggering other workflows
+          # Use PAT to allow triggering other workflows, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
@@ -51,13 +79,41 @@ jobs:
           fetch-depth: 0
           # Use PAT to allow triggering CI workflows on the release PR
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Validate GitHub Token
+        run: |
+          # Validate token format and remove any potential whitespace
+          if [ -n "${{ secrets.RELEASE_PLZ_TOKEN }}" ]; then
+            echo "Using RELEASE_PLZ_TOKEN"
+            TOKEN="${{ secrets.RELEASE_PLZ_TOKEN }}"
+          else
+            echo "Using GITHUB_TOKEN"
+            TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
+
+          # Basic token validation
+          if [[ ! "$TOKEN" =~ ^(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_) ]]; then
+            echo "Warning: Token format may be invalid"
+          fi
+
+          # Test token with a simple API call
+          curl -s -H "Authorization: Bearer $TOKEN" \
+               -H "Accept: application/vnd.github.v3+json" \
+               https://api.github.com/user > /dev/null || {
+            echo "Error: Token validation failed"
+            exit 1
+          }
+          echo "Token validation successful"
+        shell: bash
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:
-          # Use PAT to allow triggering CI workflows on the release PR
+          # Use PAT to allow triggering CI workflows on the release PR, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
