@@ -175,27 +175,41 @@ jobs:
         # Get checksum for the Windows release
         $url64 = "https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-x86_64-pc-windows-msvc.zip"
 
-        # Wait a bit for the release to be available
-        Start-Sleep -Seconds 30
+        # Wait for the release to be available with retry logic
+        $maxRetries = 10
+        $retryCount = 0
+        $checksum64 = ""
 
-        try {
-          $tempFile = [System.IO.Path]::GetTempFileName()
-          Invoke-WebRequest -Uri $url64 -OutFile $tempFile -UseBasicParsing
-          $hash = Get-FileHash -Path $tempFile -Algorithm SHA256
-          Remove-Item $tempFile -Force
-          $checksum64 = $hash.Hash
+        do {
+          Start-Sleep -Seconds 30
+          $retryCount++
+          Write-Host "Attempt $retryCount of $maxRetries to download release..."
 
-          # Update install script with correct URL and checksum
-          $installScriptPath = "chocolatey/tools/chocolateyinstall.ps1"
-          $installScript = Get-Content $installScriptPath -Raw
-          $installScript = $installScript -replace "url64 = 'https://github\.com/[^']+/releases/download/v[\d\.]+/[^']+\.zip'", "url64 = '$url64'"
-          $installScript = $installScript -replace "checksum64 = '[^']*'", "checksum64 = '$checksum64'"
-          Set-Content -Path $installScriptPath -Value $installScript -Encoding UTF8
+          try {
+            $tempFile = [System.IO.Path]::GetTempFileName()
+            Invoke-WebRequest -Uri $url64 -OutFile $tempFile -UseBasicParsing
+            $hash = Get-FileHash -Path $tempFile -Algorithm SHA256
+            Remove-Item $tempFile -Force
+            $checksum64 = $hash.Hash
+            Write-Host "Successfully downloaded and calculated checksum: $checksum64"
+            break
+          } catch {
+            Write-Warning "Attempt $retryCount failed: $_"
+            if ($retryCount -eq $maxRetries) {
+              Write-Error "Failed to download release after $maxRetries attempts"
+              throw
+            }
+          }
+        } while ($retryCount -lt $maxRetries)
 
-          Write-Host "Updated Chocolatey package with checksum: $checksum64"
-        } catch {
-          Write-Warning "Failed to get checksum, using empty checksum: $_"
-        }
+        # Update install script with correct URL and checksum
+        $installScriptPath = "chocolatey/tools/chocolateyinstall.ps1"
+        $installScript = Get-Content $installScriptPath -Raw
+        $installScript = $installScript -replace "url64 = 'https://github\.com/[^']+/releases/download/v[\d\.]+/[^']+\.zip'", "url64 = '$url64'"
+        $installScript = $installScript -replace "checksum64 = '[^']*'", "checksum64 = '$checksum64'"
+        Set-Content -Path $installScriptPath -Value $installScript -Encoding UTF8
+
+        Write-Host "Updated Chocolatey package with checksum: $checksum64"
 
     - name: Pack and Push to Chocolatey
       uses: crazy-max/ghaction-chocolatey@v3
