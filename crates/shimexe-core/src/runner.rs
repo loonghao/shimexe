@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, SystemTime};
 use tracing::{debug, info, warn};
 
 use crate::config::ShimConfig;
@@ -7,6 +9,79 @@ use crate::downloader::Downloader;
 use crate::error::{Result, ShimError};
 use crate::updater::ShimUpdater;
 use crate::utils::merge_env_vars;
+
+/// Cache entry for executable validation results
+#[derive(Debug, Clone)]
+struct ValidationCacheEntry {
+    is_valid: bool,
+    last_checked: SystemTime,
+    file_modified: SystemTime,
+}
+
+/// Performance cache for executable validation
+#[derive(Debug, Clone)]
+struct ExecutableCache {
+    cache: Arc<Mutex<std::collections::HashMap<PathBuf, ValidationCacheEntry>>>,
+    ttl: Duration,
+}
+
+impl ExecutableCache {
+    fn new(ttl: Duration) -> Self {
+        Self {
+            cache: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            ttl,
+        }
+    }
+
+    fn is_valid(&self, path: &Path) -> Option<bool> {
+        let now = SystemTime::now();
+        if let Ok(cache) = self.cache.lock() {
+            if let Some(entry) = cache.get(path) {
+                // Check if cache entry is still valid
+                if now
+                    .duration_since(entry.last_checked)
+                    .unwrap_or(Duration::MAX)
+                    < self.ttl
+                {
+                    // Check if file hasn't been modified
+                    if let Ok(metadata) = std::fs::metadata(path) {
+                        if let Ok(modified) = metadata.modified() {
+                            if modified <= entry.file_modified {
+                                return Some(entry.is_valid);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn set_valid(&self, path: &Path, is_valid: bool) {
+        let now = SystemTime::now();
+        let file_modified = std::fs::metadata(path)
+            .and_then(|m| m.modified())
+            .unwrap_or(now);
+
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.insert(
+                path.to_path_buf(),
+                ValidationCacheEntry {
+                    is_valid,
+                    last_checked: now,
+                    file_modified,
+                },
+            );
+        }
+    }
+}
+
+// Global cache instance with 30-second TTL
+static EXECUTABLE_CACHE: OnceLock<ExecutableCache> = OnceLock::new();
+
+fn get_executable_cache() -> &'static ExecutableCache {
+    EXECUTABLE_CACHE.get_or_init(|| ExecutableCache::new(Duration::from_secs(30)))
+}
 
 /// Shim runner that executes the target executable
 pub struct ShimRunner {
@@ -37,6 +112,8 @@ impl ShimRunner {
 
     /// Execute the shim with additional arguments
     pub fn execute(&self, additional_args: &[String]) -> Result<i32> {
+        let start_time = SystemTime::now();
+
         // Check for updates if auto-update is enabled
         if let Some(ref auto_update) = self.config.auto_update {
             if let Some(ref shim_file_path) = self.shim_file_path {
@@ -49,11 +126,30 @@ impl ShimRunner {
 
         let executable_path = self.config.get_executable_path()?;
 
+        // Use cached validation if available
+        let cache = get_executable_cache();
+        if let Some(is_valid) = cache.is_valid(&executable_path) {
+            if !is_valid {
+                return Err(ShimError::ExecutableNotFound(
+                    executable_path.to_string_lossy().to_string(),
+                ));
+            }
+        } else {
+            // Validate and cache the result
+            let is_valid = self.validate_executable_fast(&executable_path);
+            cache.set_valid(&executable_path, is_valid);
+            if !is_valid {
+                return Err(ShimError::ExecutableNotFound(
+                    executable_path.to_string_lossy().to_string(),
+                ));
+            }
+        }
+
         debug!("Executing: {:?}", executable_path);
         debug!("Default args: {:?}", self.config.shim.args);
         debug!("Additional args: {:?}", additional_args);
 
-        // Prepare command
+        // Prepare command with optimized environment variable handling
         let mut cmd = Command::new(&executable_path);
 
         // Add default arguments
@@ -67,10 +163,12 @@ impl ShimRunner {
             cmd.current_dir(cwd);
         }
 
-        // Set environment variables
-        let env_vars = merge_env_vars(&self.config.env);
-        for (key, value) in env_vars {
-            cmd.env(key, value);
+        // Set environment variables (optimized to avoid unnecessary allocations)
+        if !self.config.env.is_empty() {
+            let env_vars = merge_env_vars(&self.config.env);
+            for (key, value) in env_vars {
+                cmd.env(key, value);
+            }
         }
 
         // Configure stdio to inherit from parent
@@ -84,7 +182,7 @@ impl ShimRunner {
         );
 
         // Execute the command
-        match cmd.status() {
+        let result = match cmd.status() {
             Ok(status) => {
                 let exit_code = status.code().unwrap_or(-1);
                 debug!("Process exited with code: {}", exit_code);
@@ -94,7 +192,19 @@ impl ShimRunner {
                 warn!("Failed to execute process: {}", e);
                 Err(ShimError::ProcessExecution(e.to_string()))
             }
+        };
+
+        // Log execution time for performance monitoring
+        if let Ok(elapsed) = start_time.elapsed() {
+            debug!("Shim execution took: {:?}", elapsed);
         }
+
+        result
+    }
+
+    /// Fast executable validation without full metadata checks
+    fn validate_executable_fast(&self, path: &Path) -> bool {
+        path.exists() && path.is_file()
     }
 
     /// Get the shim configuration
@@ -106,6 +216,27 @@ impl ShimRunner {
     pub fn validate(&self) -> Result<()> {
         let executable_path = self.config.get_executable_path()?;
 
+        // Use cached validation if available
+        let cache = get_executable_cache();
+        if let Some(is_valid) = cache.is_valid(&executable_path) {
+            if is_valid {
+                return Ok(());
+            } else {
+                return Err(ShimError::ExecutableNotFound(
+                    executable_path.to_string_lossy().to_string(),
+                ));
+            }
+        }
+
+        // Perform full validation and cache the result
+        let validation_result = self.validate_executable_full(&executable_path);
+        let is_valid = validation_result.is_ok();
+        cache.set_valid(&executable_path, is_valid);
+        validation_result
+    }
+
+    /// Perform full executable validation with all checks
+    fn validate_executable_full(&self, executable_path: &Path) -> Result<()> {
         if !executable_path.exists() {
             return Err(ShimError::ExecutableNotFound(
                 executable_path.to_string_lossy().to_string(),

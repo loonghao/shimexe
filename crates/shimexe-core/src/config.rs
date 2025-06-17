@@ -1,10 +1,116 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 
 use crate::error::{Result, ShimError};
 use crate::template::ArgsConfig;
 use crate::utils::expand_env_vars;
+
+/// Configuration cache entry
+#[derive(Debug, Clone)]
+struct CacheEntry {
+    config: ShimConfig,
+    last_modified: SystemTime,
+    cached_at: SystemTime,
+}
+
+/// Configuration cache for improved performance
+#[derive(Debug, Clone)]
+pub struct ConfigCache {
+    cache: Arc<Mutex<HashMap<PathBuf, CacheEntry>>>,
+    ttl: Duration,
+}
+
+impl ConfigCache {
+    /// Create a new configuration cache with specified TTL
+    pub fn new(ttl: Duration) -> Self {
+        Self {
+            cache: Arc::new(Mutex::new(HashMap::new())),
+            ttl,
+        }
+    }
+
+    /// Create a new configuration cache with default TTL (5 minutes)
+    pub fn default() -> Self {
+        Self::new(Duration::from_secs(300))
+    }
+
+    /// Get configuration from cache or load from file
+    pub fn get_or_load<P: AsRef<Path>>(&self, path: P) -> Result<ShimConfig> {
+        let path = path.as_ref().to_path_buf();
+        let now = SystemTime::now();
+
+        // Check cache first
+        if let Ok(cache) = self.cache.lock() {
+            if let Some(entry) = cache.get(&path) {
+                // Check if cache entry is still valid
+                if now.duration_since(entry.cached_at).unwrap_or(Duration::MAX) < self.ttl {
+                    // Check if file hasn't been modified
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        if let Ok(modified) = metadata.modified() {
+                            if modified <= entry.last_modified {
+                                return Ok(entry.config.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Load from file and update cache
+        let config = ShimConfig::from_file(&path)?;
+        let last_modified = std::fs::metadata(&path)
+            .and_then(|m| m.modified())
+            .unwrap_or(now);
+
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.insert(
+                path,
+                CacheEntry {
+                    config: config.clone(),
+                    last_modified,
+                    cached_at: now,
+                },
+            );
+        }
+
+        Ok(config)
+    }
+
+    /// Invalidate cache entry for a specific path
+    pub fn invalidate<P: AsRef<Path>>(&self, path: P) {
+        let path = path.as_ref().to_path_buf();
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.remove(&path);
+        }
+    }
+
+    /// Clear all cache entries
+    pub fn clear(&self) {
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.clear();
+        }
+    }
+
+    /// Get cache statistics
+    pub fn stats(&self) -> (usize, usize) {
+        if let Ok(cache) = self.cache.lock() {
+            let total = cache.len();
+            let now = SystemTime::now();
+            let valid = cache
+                .values()
+                .filter(|entry| {
+                    now.duration_since(entry.cached_at).unwrap_or(Duration::MAX) < self.ttl
+                })
+                .count();
+            (total, valid)
+        } else {
+            (0, 0)
+        }
+    }
+}
 
 /// Main shim configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,13 +262,78 @@ impl ShimConfig {
         Ok(config)
     }
 
+    /// Load shim configuration from a TOML file asynchronously
+    pub async fn from_file_async<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
+        let content = tokio::fs::read_to_string(&path)
+            .await
+            .map_err(ShimError::Io)?;
+
+        let config: ShimConfig = toml::from_str(&content).map_err(ShimError::TomlParse)?;
+
+        config.validate()?;
+        Ok(config)
+    }
+
     /// Save shim configuration to a TOML file
     pub fn to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<()> {
-        let content = toml::to_string_pretty(self).map_err(ShimError::TomlSerialize)?;
+        // Check if file already exists and has the same content to avoid unnecessary writes
+        if let Ok(existing_content) = std::fs::read_to_string(&path) {
+            let new_content = toml::to_string_pretty(self).map_err(ShimError::TomlSerialize)?;
+            if existing_content.trim() == new_content.trim() {
+                return Ok(()); // No changes needed
+            }
+        }
 
+        let content = toml::to_string_pretty(self).map_err(ShimError::TomlSerialize)?;
         std::fs::write(path, content).map_err(ShimError::Io)?;
 
         Ok(())
+    }
+
+    /// Save shim configuration to a TOML file asynchronously
+    pub async fn to_file_async<P: AsRef<std::path::Path>>(&self, path: P) -> Result<()> {
+        // Check if file already exists and has the same content to avoid unnecessary writes
+        if let Ok(existing_content) = tokio::fs::read_to_string(&path).await {
+            let new_content = toml::to_string_pretty(self).map_err(ShimError::TomlSerialize)?;
+            if existing_content.trim() == new_content.trim() {
+                return Ok(()); // No changes needed
+            }
+        }
+
+        let content = toml::to_string_pretty(self).map_err(ShimError::TomlSerialize)?;
+        tokio::fs::write(path, content)
+            .await
+            .map_err(ShimError::Io)?;
+
+        Ok(())
+    }
+
+    /// Load multiple configuration files concurrently
+    pub async fn from_files_concurrent<P: AsRef<std::path::Path>>(
+        paths: Vec<P>,
+    ) -> Vec<Result<Self>> {
+        use futures_util::future::join_all;
+
+        let futures = paths
+            .into_iter()
+            .map(|path| Self::from_file_async(path))
+            .collect::<Vec<_>>();
+
+        join_all(futures).await
+    }
+
+    /// Save multiple configurations concurrently
+    pub async fn to_files_concurrent<P: AsRef<std::path::Path>>(
+        configs_and_paths: Vec<(&Self, P)>,
+    ) -> Vec<Result<()>> {
+        use futures_util::future::join_all;
+
+        let futures = configs_and_paths
+            .into_iter()
+            .map(|(config, path)| config.to_file_async(path))
+            .collect::<Vec<_>>();
+
+        join_all(futures).await
     }
 
     /// Validate the configuration
