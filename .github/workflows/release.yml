@@ -72,21 +72,55 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Cache ImageMagick installation to speed up builds
+      - name: Cache ImageMagick (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/convert
+          key: imagemagick-linux-${{ runner.os }}-${{ matrix.platform.target }}
+
+      - name: Cache ImageMagick (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: /opt/homebrew/bin/convert
+          key: imagemagick-macos-${{ runner.os }}-${{ matrix.platform.target }}
+
+      - name: Cache Chocolatey packages (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: C:\ProgramData\chocolatey\lib\imagemagick
+          key: chocolatey-imagemagick-${{ runner.os }}
+
       - name: Install dependencies
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update
-            sudo apt-get install -y imagemagick
+            if [ ! -f "/usr/bin/convert" ]; then
+              sudo apt-get update
+              sudo apt-get install -y imagemagick
+            else
+              echo "ImageMagick already installed (cached)"
+            fi
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install imagemagick
+            if [ ! -f "/opt/homebrew/bin/convert" ]; then
+              brew install imagemagick
+            else
+              echo "ImageMagick already installed (cached)"
+            fi
           fi
         shell: bash
 
       - name: Install ImageMagick (Windows)
         if: runner.os == 'Windows'
-        uses: crazy-max/ghaction-chocolatey@v3
-        with:
-          args: install imagemagick
+        run: |
+          if (!(Test-Path "C:\ProgramData\chocolatey\lib\imagemagick")) {
+            choco install imagemagick -y
+          } else {
+            Write-Host "ImageMagick already installed (cached)"
+          }
+        shell: powershell
 
       - name: Build executable
         uses: houseabsolute/actions-rust-cross@v1
@@ -181,9 +215,9 @@ jobs:
         args: pack chocolatey/shimexe.nuspec
 
     - name: Push to Chocolatey
-      if: env.CHOCOLATEY_API_KEY != ''
+      if: ${{ secrets.CHOCOLATEY_API_KEY != '' }}
       uses: crazy-max/ghaction-chocolatey@v3
       with:
-        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key $CHOCOLATEY_API_KEY
+        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ env.CHOCOLATEY_API_KEY }}
       env:
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
