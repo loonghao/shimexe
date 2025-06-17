@@ -29,6 +29,7 @@ jobs:
     strategy:
       matrix:
         platform:
+          # Linux platforms
           - os_name: Linux-x86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -37,10 +38,24 @@ jobs:
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
 
+          - os_name: Linux-aarch64
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+
+          - os_name: Linux-aarch64-musl
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+
+          # Windows platforms
           - os_name: Windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
 
+          - os_name: Windows-aarch64
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+
+          # macOS platforms
           - os_name: macOS-x86_64
             os: macos-latest
             target: x86_64-apple-darwin
@@ -49,19 +64,15 @@ jobs:
             os: macos-latest
             target: aarch64-apple-darwin
 
+          # FreeBSD platform (cross-compiled from Linux)
+          - os_name: FreeBSD-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform.target }}
-
-      - name: Install musl tools
-        if: matrix.platform.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get install -y musl-tools
 
       - name: Install ImageMagick (Windows)
         if: runner.os == 'Windows'
@@ -79,7 +90,12 @@ jobs:
         run: brew install imagemagick
 
       - name: Build executable
-        run: cargo build --release --target ${{ matrix.platform.target }} --bin shimexe
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --bin shimexe"
+          strip: true
 
       - name: Publish artifacts and release
         uses: houseabsolute/actions-rust-release@v0
@@ -107,12 +123,6 @@ jobs:
       run: |
         $version = "${{ github.ref_name }}" -replace "^v", ""
         echo "version=$version" >> $env:GITHUB_OUTPUT
-
-    - name: Setup Chocolatey
-      run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     - name: Create Chocolatey Package
       run: |
@@ -166,12 +176,15 @@ jobs:
         Install-ChocolateyZipPackage @packageArgs
         "@ | Out-File -FilePath "tools\chocolateyinstall.ps1" -Encoding UTF8
 
-        choco pack
+    - name: Pack and Push to Chocolatey
+      uses: crazy-max/ghaction-chocolatey@v3
+      with:
+        args: pack chocolatey/shimexe.nuspec
 
     - name: Push to Chocolatey
       if: env.CHOCOLATEY_API_KEY != ''
-      run: |
-        cd chocolatey
-        choco push shimexe.*.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
+      uses: crazy-max/ghaction-chocolatey@v3
+      with:
+        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key $CHOCOLATEY_API_KEY
       env:
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}

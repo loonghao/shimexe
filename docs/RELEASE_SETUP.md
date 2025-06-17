@@ -7,7 +7,33 @@ This document explains how to set up the release workflow for shimexe, including
 The shimexe project uses two workflows for releases:
 
 1. **release-plz.yml**: Manages version updates and creates GitHub releases
-2. **release.yml**: Builds cross-platform binaries using `houseabsolute/actions-rust-release`
+2. **release.yml**: Builds cross-platform binaries using advanced Rust tooling:
+   - `houseabsolute/actions-rust-cross`: Cross-compilation for multiple platforms
+   - `houseabsolute/actions-rust-release`: Automated release management
+   - `crazy-max/ghaction-chocolatey`: Chocolatey package publishing
+
+## Supported Platforms
+
+The release workflow builds binaries for the following platforms:
+
+### Linux
+- **x86_64-unknown-linux-gnu**: Standard Linux x86_64 (glibc)
+- **x86_64-unknown-linux-musl**: Linux x86_64 with musl (static linking)
+- **aarch64-unknown-linux-gnu**: Linux ARM64 (glibc)
+- **aarch64-unknown-linux-musl**: Linux ARM64 with musl (static linking)
+
+### Windows
+- **x86_64-pc-windows-msvc**: Windows x86_64
+- **aarch64-pc-windows-msvc**: Windows ARM64
+
+### macOS
+- **x86_64-apple-darwin**: macOS Intel
+- **aarch64-apple-darwin**: macOS Apple Silicon (M1/M2)
+
+### FreeBSD
+- **x86_64-unknown-freebsd**: FreeBSD x86_64 (cross-compiled from Linux)
+
+All platforms are built using `houseabsolute/actions-rust-cross` which provides robust cross-compilation support with proper toolchain management and caching.
 
 ## Required GitHub Secrets
 
@@ -77,10 +103,12 @@ This token allows publishing to the Chocolatey package manager.
    - Creates git tag
 
 5. **release.yml workflow** is triggered by the release event and:
-   - Uses `houseabsolute/actions-rust-release` for simplified binary building
+   - Uses `houseabsolute/actions-rust-cross` for cross-platform compilation
+   - Supports 9 different platforms including FreeBSD and ARM architectures
+   - Uses `houseabsolute/actions-rust-release` for automated release management
    - Automatically creates archives with checksums for all platforms
+   - Uses `crazy-max/ghaction-chocolatey` for simplified Chocolatey publishing
    - Uploads binaries to the GitHub release
-   - Publishes to Chocolatey (if configured)
 
 ### Manual Release Process
 
