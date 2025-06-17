@@ -23,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Package-specific configuration
 [[package]]
 name = "shimexe-core"
-path = "crates/shimexe-core"
 changelog_update = true
 # Custom tag format for shimexe-core (library releases)
 git_tag_name = "shimexe-core-v{{version}}"
