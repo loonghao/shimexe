@@ -32,11 +32,6 @@ impl ConfigCache {
         }
     }
 
-    /// Create a new configuration cache with default TTL (5 minutes)
-    pub fn default() -> Self {
-        Self::new(Duration::from_secs(300))
-    }
-
     /// Get configuration from cache or load from file
     pub fn get_or_load<P: AsRef<Path>>(&self, path: P) -> Result<ShimConfig> {
         let path = path.as_ref().to_path_buf();
@@ -109,6 +104,13 @@ impl ConfigCache {
         } else {
             (0, 0)
         }
+    }
+}
+
+impl Default for ConfigCache {
+    /// Create a new configuration cache with default TTL (5 minutes)
+    fn default() -> Self {
+        Self::new(Duration::from_secs(300))
     }
 }
 
