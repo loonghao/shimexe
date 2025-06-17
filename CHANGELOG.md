@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.3](https://github.com/loonghao/shimexe/compare/v0.1.2...v0.1.3) - 2025-06-17
+
+### Added
+
+- enhance release-plz validation with version update check
+- modernize GitHub Actions to latest versions
+
+### Fixed
+
+- use official release-plz GitHub Action
+- add git-token parameter to release-plz dry-run
+- resolve git detached HEAD issue in release-plz dry-run
+- update release-plz configuration and add dry-run checks
+- improve release workflow to handle existing releases
+- update release-plz configuration for standard tag format
+
+### Other
+
+- simplify PR validation to config-only check
+- move release-plz dry-run to CI workflow
+- move shimexe-cli to root src directory
+
 ## [0.1.2](https://github.com/loonghao/shimexe/compare/shimexe-v0.1.1...shimexe-v0.1.2) - 2025-06-16
 
 ### Added
