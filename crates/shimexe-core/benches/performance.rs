@@ -54,7 +54,7 @@ author = "Test Author"
 
 fn bench_config_loading(c: &mut Criterion) {
     let temp_file = create_test_config_file();
-    
+
     c.bench_function("config_from_file", |b| {
         b.iter(|| {
             let config = ShimConfig::from_file(black_box(temp_file.path())).unwrap();
@@ -65,7 +65,7 @@ fn bench_config_loading(c: &mut Criterion) {
 
 fn bench_config_saving(c: &mut Criterion) {
     let config = create_test_config();
-    
+
     c.bench_function("config_to_file", |b| {
         b.iter(|| {
             let temp_file = NamedTempFile::new().unwrap();
@@ -77,14 +77,14 @@ fn bench_config_saving(c: &mut Criterion) {
 
 fn bench_runner_creation(c: &mut Criterion) {
     let config = create_test_config();
-    
+
     c.bench_function("runner_from_config", |b| {
         b.iter(|| {
             let runner = ShimRunner::from_config(black_box(config.clone())).unwrap();
             black_box(runner);
         })
     });
-    
+
     let temp_file = create_test_config_file();
     c.bench_function("runner_from_file", |b| {
         b.iter(|| {
@@ -97,7 +97,7 @@ fn bench_runner_creation(c: &mut Criterion) {
 fn bench_validation(c: &mut Criterion) {
     let config = create_test_config();
     let runner = ShimRunner::from_config(config).unwrap();
-    
+
     c.bench_function("validate_executable", |b| {
         b.iter(|| {
             let result = runner.validate();
@@ -111,7 +111,7 @@ fn bench_config_expansion(c: &mut Criterion) {
     // Add some environment variables that need expansion
     config.shim.path = "${HOME}/bin/echo".to_string();
     config.shim.args = vec!["${USER}".to_string(), "${PWD}".to_string()];
-    
+
     c.bench_function("expand_env_vars", |b| {
         b.iter(|| {
             let mut config_copy = config.clone();
@@ -124,11 +124,11 @@ fn bench_config_expansion(c: &mut Criterion) {
 fn bench_concurrent_config_loading(c: &mut Criterion) {
     use shimexe_core::ShimConfig;
     use std::path::PathBuf;
-    
+
     // Create multiple test files
     let temp_files: Vec<_> = (0..10).map(|_| create_test_config_file()).collect();
     let paths: Vec<PathBuf> = temp_files.iter().map(|f| f.path().to_path_buf()).collect();
-    
+
     c.bench_function("concurrent_config_loading", |b| {
         b.iter(|| {
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -143,10 +143,10 @@ fn bench_concurrent_config_loading(c: &mut Criterion) {
 fn bench_cache_performance(c: &mut Criterion) {
     let config = create_test_config();
     let runner = ShimRunner::from_config(config).unwrap();
-    
+
     // First validation to populate cache
     let _ = runner.validate();
-    
+
     c.bench_function("cached_validation", |b| {
         b.iter(|| {
             let result = runner.validate();

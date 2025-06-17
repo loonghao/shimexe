@@ -130,15 +130,26 @@ impl ShimManager {
         let current_exe = std::env::current_exe()?;
         let target_exe = self.get_executable_path(name);
 
-        fs::copy(&current_exe, &target_exe)?;
+        // Check if target already exists and is identical to avoid unnecessary copying
+        if self.is_executable_up_to_date(&current_exe, &target_exe)? {
+            debug!(
+                "Executable shim already up to date: {}",
+                target_exe.display()
+            );
+        } else {
+            // Use efficient file copying with progress for large files
+            self.copy_executable_efficiently(&current_exe, &target_exe)?;
 
-        // On Unix-like systems, ensure the file is executable
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&target_exe)?.permissions();
-            perms.set_mode(perms.mode() | 0o755);
-            fs::set_permissions(&target_exe, perms)?;
+            // On Unix-like systems, ensure the file is executable
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = fs::metadata(&target_exe)?.permissions();
+                perms.set_mode(perms.mode() | 0o755);
+                fs::set_permissions(&target_exe, perms)?;
+            }
+
+            debug!("Created executable shim: {}", target_exe.display());
         }
 
         // Create a local copy of the shim configuration next to the executable
@@ -149,8 +160,66 @@ impl ShimManager {
         let local_shim_file = exe_dir.join(format!("{}.shim.toml", name));
         config.to_file(&local_shim_file)?;
 
-        debug!("Created executable shim: {}", target_exe.display());
         debug!("Created local shim config: {}", local_shim_file.display());
+        Ok(())
+    }
+
+    /// Check if the target executable is up to date compared to source
+    fn is_executable_up_to_date(&self, source: &Path, target: &Path) -> Result<bool> {
+        if !target.exists() {
+            return Ok(false);
+        }
+
+        let source_metadata = fs::metadata(source)?;
+        let target_metadata = fs::metadata(target)?;
+
+        // Compare file size and modification time
+        Ok(source_metadata.len() == target_metadata.len()
+            && source_metadata.modified()? <= target_metadata.modified()?)
+    }
+
+    /// Copy executable file efficiently with optimizations for large files
+    fn copy_executable_efficiently(&self, source: &Path, target: &Path) -> Result<()> {
+        use std::io::{BufReader, BufWriter};
+
+        // Create parent directories if they don't exist
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let source_file = fs::File::open(source)?;
+        let target_file = fs::File::create(target)?;
+
+        let source_metadata = source_file.metadata()?;
+        let file_size = source_metadata.len();
+
+        // For small files (< 1MB), use simple copy
+        if file_size < 1024 * 1024 {
+            drop(source_file);
+            drop(target_file);
+            fs::copy(source, target)?;
+            return Ok(());
+        }
+
+        // For larger files, use buffered copying with progress
+        let mut reader = BufReader::with_capacity(64 * 1024, source_file); // 64KB buffer
+        let mut writer = BufWriter::with_capacity(64 * 1024, target_file);
+
+        let copied = std::io::copy(&mut reader, &mut writer)?;
+
+        if copied != file_size {
+            return Err(anyhow::anyhow!(
+                "File copy incomplete: expected {} bytes, copied {} bytes",
+                file_size,
+                copied
+            ));
+        }
+
+        debug!(
+            "Efficiently copied {} bytes to {}",
+            copied,
+            target.display()
+        );
         Ok(())
     }
 
