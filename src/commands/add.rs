@@ -76,12 +76,19 @@ impl AddCommand {
         }
 
         // Create shim configuration
+        let download_url = if Downloader::is_url(&self.path) {
+            Some(self.path.clone())
+        } else {
+            None
+        };
+
         let config = ShimConfig {
             shim: ShimCore {
                 name: shim_name.clone(),
                 path: actual_path.clone(),
                 args: self.args.clone(),
                 cwd: self.cwd.clone(),
+                download_url,
             },
             args: Default::default(),
             env: env_vars,

@@ -179,30 +179,41 @@ impl ShimRunner {
 
     /// Ensure the executable is available, downloading if necessary
     fn ensure_executable_available(&self) -> Result<()> {
-        // Check if the path is a URL
-        if Downloader::is_url(&self.config.shim.path) {
-            // For HTTP URLs, we need to check if the local file exists
-            // and download it if it doesn't
+        // Check if this shim has a download URL (was created from HTTP)
+        if let Some(download_url) = self.config.get_download_url() {
+            // This shim was created from an HTTP URL
             let executable_path = match self.config.get_executable_path() {
                 Ok(path) => path,
                 Err(_) => {
-                    // If get_executable_path fails for a URL, it means we need to download
-                    return self.download_executable();
+                    // If get_executable_path fails, it means we need to download
+                    return self.download_executable_from_url(download_url);
                 }
             };
 
             // Check if the file exists
             if !executable_path.exists() {
-                return self.download_executable();
+                return self.download_executable_from_url(download_url);
+            }
+        } else if Downloader::is_url(&self.config.shim.path) {
+            // Legacy: path is still a URL (for backward compatibility)
+            let executable_path = match self.config.get_executable_path() {
+                Ok(path) => path,
+                Err(_) => {
+                    // If get_executable_path fails for a URL, it means we need to download
+                    return self.download_executable_from_url(&self.config.shim.path);
+                }
+            };
+
+            // Check if the file exists
+            if !executable_path.exists() {
+                return self.download_executable_from_url(&self.config.shim.path);
             }
         }
         Ok(())
     }
 
     /// Download the executable from HTTP URL
-    fn download_executable(&self) -> Result<()> {
-        let url = &self.config.shim.path;
-
+    fn download_executable_from_url(&self, url: &str) -> Result<()> {
         // Extract filename from URL
         let filename = Downloader::extract_filename_from_url(url).ok_or_else(|| {
             ShimError::Config(format!("Could not extract filename from URL: {}", url))
@@ -263,6 +274,7 @@ mod tests {
                 path: "echo".to_string(),
                 args: vec!["hello".to_string()],
                 cwd: None,
+                download_url: None,
             },
             args: Default::default(),
             env: std::collections::HashMap::new(),
