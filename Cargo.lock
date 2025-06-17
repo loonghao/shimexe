@@ -1212,7 +1212,7 @@ dependencies = [
 
 [[package]]
 name = "shimexe"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1229,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "shimexe-core"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
