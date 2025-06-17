@@ -33,65 +33,49 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  get-release-info:
-    name: Get Release Info
+  create-release:
+    name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.get_release.outputs.upload_url }}
-      tag_name: ${{ steps.get_release.outputs.tag_name }}
-      release_id: ${{ steps.get_release.outputs.release_id }}
+      tag_name: ${{ steps.get_tag.outputs.tag_name }}
     steps:
     - uses: actions/checkout@v4
 
-    - name: Get Release Info
-      id: get_release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Get tag name
+      id: get_tag
       run: |
         if [ "${{ github.event_name }}" = "release" ]; then
-          echo "upload_url=${{ github.event.release.upload_url }}" >> $GITHUB_OUTPUT
           echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          echo "release_id=${{ github.event.release.id }}" >> $GITHUB_OUTPUT
         elif [ "${{ github.event_name }}" = "push" ]; then
-          # Extract tag name from ref (refs/tags/v1.0.0 -> v1.0.0)
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-
-          # Check if release already exists
-          RELEASE_INFO=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME 2>/dev/null || echo "null")
-
-          if [ "$RELEASE_INFO" = "null" ]; then
-            # Create new release
-            echo "Creating new release for tag $TAG_NAME"
-            RELEASE_BODY="Release $TAG_NAME\n\n## Changes\nSee [CHANGELOG.md](https://github.com/loonghao/shimexe/blob/main/CHANGELOG.md) for details.\n\n## Downloads\n- **Windows**: shimexe-windows-x86_64.exe\n- **Linux**: shimexe-linux-x86_64 or shimexe-linux-x86_64-musl\n- **macOS**: shimexe-macos-x86_64 or shimexe-macos-aarch64"
-
-            RELEASE_RESPONSE=$(gh api repos/${{ github.repository }}/releases \
-              --method POST \
-              --field tag_name="$TAG_NAME" \
-              --field name="Release $TAG_NAME" \
-              --field body="$RELEASE_BODY" \
-              --field draft=false \
-              --field prerelease=false)
-
-            UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | jq -r '.upload_url')
-            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-          else
-            # Use existing release
-            echo "Using existing release for tag $TAG_NAME"
-            UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.upload_url')
-            RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.id')
-          fi
-
-          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
-          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "upload_url=${{ inputs.upload_url }}" >> $GITHUB_OUTPUT
           echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
         fi
 
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag_name }}
+        name: Release ${{ steps.get_tag.outputs.tag_name }}
+        body: |
+          Release ${{ steps.get_tag.outputs.tag_name }}
+
+          ## Changes
+          See [CHANGELOG.md](https://github.com/loonghao/shimexe/blob/main/CHANGELOG.md) for details.
+
+          ## Downloads
+          - **Windows**: shimexe-windows-x86_64.exe
+          - **Linux**: shimexe-linux-x86_64 or shimexe-linux-x86_64-musl
+          - **macOS**: shimexe-macos-x86_64 or shimexe-macos-aarch64
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        append_body: true
+
   build-and-upload:
     name: Build and Upload
-    needs: get-release-info
+    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -148,18 +132,16 @@ jobs:
       run: cargo build --release --target ${{ matrix.target }} --bin shimexe
     
     - name: Upload Release Asset
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        gh release upload ${{ needs.get-release-info.outputs.tag_name }} \
-          ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}#${{ matrix.asset_name }} \
-          --clobber
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.create-release.outputs.tag_name }}
+        files: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
 
 
   chocolatey:
     name: Publish to Chocolatey
-    needs: [get-release-info, build-and-upload]
+    needs: [create-release, build-and-upload]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     steps:
@@ -174,7 +156,7 @@ jobs:
     - name: Create Chocolatey Package
       run: |
         # Get version from tag name, removing 'v' prefix
-        $version = "${{ needs.get-release-info.outputs.tag_name }}" -replace "^v", ""
+        $version = "${{ needs.create-release.outputs.tag_name }}" -replace "^v", ""
         mkdir chocolatey
         cd chocolatey
         

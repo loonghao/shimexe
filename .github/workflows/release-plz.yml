@@ -26,7 +26,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@v0.5
+        uses: MarcoIeni/release-plz-action@v0.5.107
         env:
           # Use PAT if available, fallback to GITHUB_TOKEN
           # Note: If you get "GitHub Actions is not permitted to create or approve pull requests" error,
