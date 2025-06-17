@@ -41,7 +41,7 @@ All platforms are built using `houseabsolute/actions-rust-cross` which provides 
 
 This Personal Access Token (PAT) allows release-plz to trigger the binary build workflow.
 
-**Why needed**: GitHub Actions using the default `GITHUB_TOKEN` cannot trigger other workflows. Without this PAT, release-plz will create releases but won't trigger the binary build workflow.
+**Why needed**: GitHub Actions using the default `GITHUB_TOKEN` cannot trigger other workflows. Without this PAT, release-plz will create tags and releases but won't trigger the binary build workflow (release.yml).
 
 **How to create**:
 
@@ -121,12 +121,15 @@ If automatic process fails, you can manually trigger releases:
 
 ### Release created but no binaries
 
-**Problem**: release-plz creates a release but the binary build workflow doesn't run.
+**Problem**: release-plz creates tags and releases but the binary build workflow doesn't run.
 
-**Solution**: 
+**Root Cause**: GitHub Actions security limitation - workflows triggered by the default `GITHUB_TOKEN` cannot trigger other workflows.
+
+**Solution**:
 1. Check if `RELEASE_PLZ_TOKEN` is set in repository secrets
 2. Verify the token has correct permissions (Contents + Pull requests + Actions)
 3. Check if the token is expired
+4. Ensure the release workflow triggers on `push: tags: - 'v*'` (not just release events)
 
 ### Binary build fails
 
