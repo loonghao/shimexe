@@ -12,6 +12,8 @@ fn create_test_config() -> ShimConfig {
             args: vec!["performance".to_string(), "test".to_string()],
             cwd: None,
             download_url: None,
+            source_type: shimexe_core::config::SourceType::File,
+            extracted_executables: vec![],
         },
         args: Default::default(),
         env: {

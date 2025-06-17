@@ -29,6 +29,8 @@ reqwest = { version = "0.12", features = [
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 futures-util = "0.3"
+zip = "2.2"
+chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 tempfile.workspace = true

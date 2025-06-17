@@ -406,6 +406,8 @@ mod tests {
                 args: vec!["hello".to_string()],
                 cwd: None,
                 download_url: None,
+                source_type: crate::config::SourceType::File,
+                extracted_executables: vec![],
             },
             args: Default::default(),
             env: std::collections::HashMap::new(),

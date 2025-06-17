@@ -37,6 +37,33 @@ cargo install shimexe
 choco install shimexe
 ```
 
+### From Scoop (Windows)
+
+```powershell
+scoop install shimexe
+```
+
+### Quick Install Scripts
+
+**Unix-like systems (macOS, Linux):**
+```bash
+curl -LsSf https://github.com/loonghao/shimexe/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://github.com/loonghao/shimexe/install.ps1 | iex
+```
+
+**Install specific version:**
+```bash
+# Unix
+curl -LsSf https://github.com/loonghao/shimexe/0.2.1/install.sh | sh
+
+# Windows
+$env:SHIMEXE_VERSION="0.2.1"; irm https://github.com/loonghao/shimexe/install.ps1 | iex
+```
+
 ### From GitHub Releases
 
 Download the latest binary from [GitHub Releases](https://github.com/loonghao/shimexe/releases).
@@ -55,7 +82,7 @@ Download the latest binary from [GitHub Releases](https://github.com/loonghao/sh
    shimexe add rust --path "${RUST_HOME:~/.cargo/bin}/rustc${EXE_EXT:.exe}" --args "--version"
    ```
 
-### HTTP URL Downloads (New!)
+### HTTP URL Downloads
 
 1. Download and create shim with explicit name:
    ```bash
@@ -68,14 +95,29 @@ Download the latest binary from [GitHub Releases](https://github.com/loonghao/sh
    # Creates 'my-tool' shim automatically
    ```
 
+### Archive Support (New!)
+
+shimexe now supports downloading and extracting archives (zip files) with automatic executable discovery:
+
+1. Download and extract zip archive:
+   ```bash
+   shimexe add plz --path https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip
+   ```
+
+2. Auto-extract and create shims for all executables:
+   ```bash
+   shimexe add tools --path https://example.com/multi-tool-package.zip
+   # Extracts archive and creates shims for all .exe files found
+   ```
+
 3. List all shims:
    ```bash
    shimexe list --detailed
    ```
 
-4. Run your shim (auto-downloads if missing):
+4. Run your shim (auto-downloads and extracts if missing):
    ```bash
-   it --help
+   plz --help
    ```
 
 ## Configuration Format
@@ -107,7 +149,9 @@ tags = ["rust", "compiler"]
 ```toml
 [shim]
 name = "installer-analyzer"
-path = "https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe"
+path = "/home/user/.shimexe/installer-analyzer/bin/installer-analyzer.exe"
+download_url = "https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe"
+source_type = "url"
 args = []
 cwd = ""
 
@@ -121,7 +165,34 @@ author = "loonghao"
 tags = ["installer", "analyzer", "tool"]
 ```
 
-**Note**: When using HTTP URLs, shimexe automatically downloads the executable to `~/.shimexe/<app>/bin/` and updates the path to point to the local file.
+### Archive Configuration (New!)
+
+```toml
+[shim]
+name = "release-plz"
+path = "/home/user/.shimexe/release-plz/bin/release-plz.exe"
+download_url = "https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip"
+source_type = "archive"
+args = []
+
+# List of extracted executables from the archive
+[[shim.extracted_executables]]
+name = "release-plz"
+path = "release-plz.exe"
+full_path = "/home/user/.shimexe/release-plz/bin/release-plz.exe"
+is_primary = true
+
+[env]
+# Optional environment variables
+
+[metadata]
+description = "Release Please tool from archive"
+version = "0.3.135"
+author = "release-plz team"
+tags = ["release", "automation", "tool"]
+```
+
+**Note**: When using HTTP URLs or archives, shimexe automatically downloads and extracts to `~/.shimexe/<app>/bin/` and updates the path to point to the local file(s).
 
 ## Environment Variable Expansion
 
@@ -193,14 +264,17 @@ shimexe validate <shim-file>
 shimexe init [--examples]
 ```
 
-### HTTP URL Examples
+### HTTP URL and Archive Examples
 
 ```bash
-# Download with explicit name
+# Download executable with explicit name
 shimexe add mytool --path https://github.com/user/repo/releases/download/v1.0/tool.exe
 
 # Auto-infer name from URL (creates 'installer-analyzer' shim)
 shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+
+# Download and extract zip archive (creates shims for all executables found)
+shimexe add plz --path https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip
 
 # Add arguments and environment variables
 shimexe add analyzer --path https://example.com/tools/analyzer.exe --args "--verbose" --env "DEBUG=1"
@@ -210,6 +284,10 @@ shimexe add mytool --path https://example.com/new-tool.exe --force
 
 # Download to custom shim directory
 shimexe add --shim-dir ./my-tools --path https://example.com/tool.exe
+
+# Archive with multiple executables (auto-detects and creates multiple shims)
+shimexe add devtools --path https://example.com/development-tools.zip
+# This might create: devtools-compiler, devtools-debugger, devtools-profiler shims
 ```
 
 ## Using as a Library
