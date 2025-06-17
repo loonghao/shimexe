@@ -181,3 +181,108 @@ impl AddCommand {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_resolve_name_and_path_local() {
+        let cmd = AddCommand {
+            name: Some("test-app".to_string()),
+            path: "/usr/bin/test".to_string(),
+            args: vec![],
+            cwd: None,
+            env: vec![],
+            description: None,
+            force: false,
+            shim_dir: None,
+            add_system_path: false,
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(cmd.resolve_name_and_path(&None)).unwrap();
+
+        assert_eq!(result.0, "test-app");
+        assert_eq!(result.1, "/usr/bin/test");
+    }
+
+    #[test]
+    fn test_resolve_name_and_path_local_infer_name() {
+        let cmd = AddCommand {
+            name: None,
+            path: "/usr/bin/my-tool".to_string(),
+            args: vec![],
+            cwd: None,
+            env: vec![],
+            description: None,
+            force: false,
+            shim_dir: None,
+            add_system_path: false,
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(cmd.resolve_name_and_path(&None)).unwrap();
+
+        assert_eq!(result.0, "my-tool");
+        assert_eq!(result.1, "/usr/bin/my-tool");
+    }
+
+    #[test]
+    fn test_url_detection_and_parsing() {
+        let cmd = AddCommand {
+            name: Some("custom-name".to_string()),
+            path: "https://example.com/tool.exe".to_string(),
+            args: vec![],
+            cwd: None,
+            env: vec![],
+            description: None,
+            force: false,
+            shim_dir: None,
+            add_system_path: false,
+        };
+
+        // Test URL detection and parsing logic
+        assert!(shimexe_core::Downloader::is_url(&cmd.path));
+        assert_eq!(
+            shimexe_core::Downloader::extract_filename_from_url(&cmd.path),
+            Some("tool.exe".to_string())
+        );
+        assert_eq!(
+            shimexe_core::Downloader::infer_app_name_from_url(&cmd.path),
+            Some("tool".to_string())
+        );
+    }
+
+    #[test]
+    fn test_env_parsing() {
+        let cmd = AddCommand {
+            name: Some("test".to_string()),
+            path: "/usr/bin/test".to_string(),
+            args: vec![],
+            cwd: None,
+            env: vec![
+                "KEY1=value1".to_string(),
+                "KEY2=value2".to_string(),
+                "PATH=/usr/bin:/bin".to_string(),
+            ],
+            description: None,
+            force: false,
+            shim_dir: None,
+            add_system_path: false,
+        };
+
+        // Test environment variable parsing logic
+        let mut env_vars = HashMap::new();
+        for env_var in &cmd.env {
+            if let Some((key, value)) = env_var.split_once('=') {
+                env_vars.insert(key.to_string(), value.to_string());
+            }
+        }
+
+        assert_eq!(env_vars.get("KEY1"), Some(&"value1".to_string()));
+        assert_eq!(env_vars.get("KEY2"), Some(&"value2".to_string()));
+        assert_eq!(env_vars.get("PATH"), Some(&"/usr/bin:/bin".to_string()));
+    }
+}

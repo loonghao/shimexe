@@ -7,17 +7,21 @@
 
 [中文文档](README_zh.md)
 
-A modern, cross-platform executable shim manager with dynamic template system and enhanced argument handling capabilities.
+A modern, cross-platform executable shim manager with HTTP URL download support, dynamic template system, and enhanced argument handling capabilities.
 
 ## Features
 
 - 🚀 **Cross-platform**: Works on Windows, macOS, and Linux
+- 🌐 **HTTP URL Support**: Download executables directly from URLs
 - 📝 **TOML Configuration**: Human-readable configuration files
 - 🔧 **Environment Variable Expansion**: Support for `${VAR:default}` syntax
 - 🎯 **Single Binary**: All functionality in one executable
 - 📦 **Package Manager Ready**: Available on crates.io and Chocolatey
 - 🔗 **API Library**: Use as a crate in your own projects
 - 🎨 **Custom Icon**: Beautiful SVG-based icon embedded in executables
+- 🤖 **Smart Name Inference**: Automatically infer application names from URLs
+- ⚡ **Auto-Download**: Missing executables are downloaded automatically at runtime
+- 🔒 **Secure Downloads**: Uses rustls-tls for secure HTTPS connections
 
 ## Installation
 
@@ -39,14 +43,29 @@ Download the latest binary from [GitHub Releases](https://github.com/loonghao/sh
 
 ## Quick Start
 
+### Traditional Local Executables
+
 1. Initialize shimexe:
    ```bash
    shimexe init --examples
    ```
 
-2. Add a new shim:
+2. Add a local executable shim:
    ```bash
    shimexe add rust --path "${RUST_HOME:~/.cargo/bin}/rustc${EXE_EXT:.exe}" --args "--version"
+   ```
+
+### HTTP URL Downloads (New!)
+
+1. Download and create shim with explicit name:
+   ```bash
+   shimexe add it --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+   ```
+
+2. Auto-infer name from URL:
+   ```bash
+   shimexe add --path https://example.com/tools/my-tool.exe
+   # Creates 'my-tool' shim automatically
    ```
 
 3. List all shims:
@@ -54,14 +73,16 @@ Download the latest binary from [GitHub Releases](https://github.com/loonghao/sh
    shimexe list --detailed
    ```
 
-4. Run your shim:
+4. Run your shim (auto-downloads if missing):
    ```bash
-   rust
+   it --help
    ```
 
 ## Configuration Format
 
 Shims are configured using TOML files with the `.shim.toml` extension:
+
+### Local Executable Configuration
 
 ```toml
 [shim]
@@ -80,6 +101,27 @@ version = "1.0.0"
 author = "Your Name"
 tags = ["rust", "compiler"]
 ```
+
+### HTTP URL Configuration
+
+```toml
+[shim]
+name = "installer-analyzer"
+path = "https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe"
+args = []
+cwd = ""
+
+[env]
+# Optional environment variables
+
+[metadata]
+description = "Installer analyzer tool from GitHub"
+version = "0.7.0"
+author = "loonghao"
+tags = ["installer", "analyzer", "tool"]
+```
+
+**Note**: When using HTTP URLs, shimexe automatically downloads the executable to `~/.shimexe/<app>/bin/` and updates the path to point to the local file.
 
 ## Environment Variable Expansion
 
@@ -151,6 +193,25 @@ shimexe validate <shim-file>
 shimexe init [--examples]
 ```
 
+### HTTP URL Examples
+
+```bash
+# Download with explicit name
+shimexe add mytool --path https://github.com/user/repo/releases/download/v1.0/tool.exe
+
+# Auto-infer name from URL (creates 'installer-analyzer' shim)
+shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+
+# Add arguments and environment variables
+shimexe add analyzer --path https://example.com/tools/analyzer.exe --args "--verbose" --env "DEBUG=1"
+
+# Force overwrite existing shim
+shimexe add mytool --path https://example.com/new-tool.exe --force
+
+# Download to custom shim directory
+shimexe add --shim-dir ./my-tools --path https://example.com/tool.exe
+```
+
 ## Using as a Library
 
 Add to your `Cargo.toml`:
@@ -182,6 +243,42 @@ let config = ShimConfig {
 };
 
 config.to_file("my-tool.shim.toml")?;
+```
+
+### HTTP URL Download Example
+
+```rust
+use shimexe_core::{Downloader, ShimConfig, ShimCore};
+
+// Download and create shim programmatically
+let downloader = Downloader::new();
+let url = "https://github.com/user/repo/releases/download/v1.0/tool.exe";
+
+// Infer app name from URL
+let app_name = Downloader::infer_app_name_from_url(url).unwrap();
+let filename = Downloader::extract_filename_from_url(url).unwrap();
+
+// Generate download path
+let download_path = Downloader::generate_download_path(
+    &std::path::Path::new("~/.shimexe"),
+    &app_name,
+    &filename
+);
+
+// Download the file
+downloader.download_file(url, &download_path).await?;
+
+// Create shim configuration
+let config = ShimConfig {
+    shim: ShimCore {
+        name: app_name,
+        path: download_path.to_string_lossy().to_string(),
+        args: vec![],
+        cwd: None,
+    },
+    env: HashMap::new(),
+    metadata: Default::default(),
+};
 ```
 
 ## Integration Examples
