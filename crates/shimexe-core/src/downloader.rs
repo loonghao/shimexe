@@ -31,6 +31,7 @@ impl Downloader {
     /// Extract filename from URL
     pub fn extract_filename_from_url(url: &str) -> Option<String> {
         let url_path = url.split('?').next()?; // Remove query parameters
+        let url_path = url_path.split('#').next()?; // Remove fragment
         let filename = url_path.split('/').next_back()?;
 
         if filename.is_empty() {
@@ -223,5 +224,97 @@ mod tests {
         let base = Path::new("/home/user/.shimexe");
         let path = Downloader::generate_download_path(base, "my-app", "my-app.exe");
         assert_eq!(path, Path::new("/home/user/.shimexe/my-app/bin/my-app.exe"));
+    }
+
+    #[test]
+    fn test_infer_app_name_edge_cases() {
+        // Test with query parameters
+        assert_eq!(
+            Downloader::infer_app_name_from_url(
+                "https://example.com/tool.exe?download=1&version=latest"
+            ),
+            Some("tool".to_string())
+        );
+
+        // Test with multiple extensions (only removes known executable extensions)
+        assert_eq!(
+            Downloader::infer_app_name_from_url("https://example.com/my-tool.tar.gz"),
+            Some("my-tool.tar.gz".to_string())
+        );
+
+        // Test with no extension
+        assert_eq!(
+            Downloader::infer_app_name_from_url("https://example.com/mytool"),
+            Some("mytool".to_string())
+        );
+
+        // Test with empty filename
+        assert_eq!(
+            Downloader::infer_app_name_from_url("https://example.com/"),
+            None
+        );
+
+        // Test with complex GitHub release URL
+        assert_eq!(
+            Downloader::infer_app_name_from_url("https://github.com/user/complex-tool-name/releases/download/v1.2.3/complex-tool-name-v1.2.3-windows-x64.exe"),
+            Some("complex-tool-name-v1.2.3-windows-x64".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_filename_edge_cases() {
+        // Test with fragment
+        assert_eq!(
+            Downloader::extract_filename_from_url("https://example.com/file.exe#section"),
+            Some("file.exe".to_string())
+        );
+
+        // Test with query and fragment
+        assert_eq!(
+            Downloader::extract_filename_from_url("https://example.com/file.exe?v=1#section"),
+            Some("file.exe".to_string())
+        );
+
+        // Test with encoded characters
+        assert_eq!(
+            Downloader::extract_filename_from_url("https://example.com/my%20tool.exe"),
+            Some("my%20tool.exe".to_string())
+        );
+
+        // Test with trailing slash
+        assert_eq!(
+            Downloader::extract_filename_from_url("https://example.com/path/"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_file_exists() {
+        // Test with non-existent file
+        assert!(!Downloader::file_exists(Path::new(
+            "/non/existent/file.exe"
+        )));
+
+        // Test with a file that should exist (Cargo.toml in the crate root)
+        let cargo_toml = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        assert!(Downloader::file_exists(&cargo_toml));
+    }
+
+    #[test]
+    fn test_generate_download_path_cross_platform() {
+        // Test Windows-style path
+        let base = Path::new("C:\\Users\\user\\.shimexe");
+        let path = Downloader::generate_download_path(base, "my-app", "my-app.exe");
+        assert_eq!(
+            path,
+            Path::new("C:\\Users\\user\\.shimexe\\my-app\\bin\\my-app.exe")
+        );
+
+        // Test with special characters in app name
+        let path = Downloader::generate_download_path(base, "my-app-v1.0", "tool.exe");
+        assert_eq!(
+            path,
+            Path::new("C:\\Users\\user\\.shimexe\\my-app-v1.0\\bin\\tool.exe")
+        );
     }
 }
