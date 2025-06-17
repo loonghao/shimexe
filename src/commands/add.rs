@@ -237,7 +237,7 @@ impl AddCommand {
                     shimexe_core::ExtractedExecutable {
                         name,
                         path: path
-                            .strip_prefix(&base_dir.join(shim_name).join("bin"))
+                            .strip_prefix(base_dir.join(shim_name).join("bin"))
                             .unwrap_or(&path)
                             .to_string_lossy()
                             .to_string(),
