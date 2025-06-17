@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.4](https://github.com/loonghao/shimexe/compare/v0.1.3...v0.1.4) - 2025-06-17
+
+### Added
+
+- enhance CI workflow with cross-compilation testing
+- enhance release workflow with advanced cross-compilation
+- simplify release workflow with actions-rust-release
+
+### Fixed
+
+- resolve OpenSSL cross-compilation issues with rustls
+- replace winget with chocolatey for ImageMagick installation
+- enable release workflow triggering with PAT token
+
+### Other
+
+- optimize dependency installation with unified approach
+
 ## [0.1.3](https://github.com/loonghao/shimexe/compare/v0.1.2...v0.1.3) - 2025-06-17
 
 ### Added
