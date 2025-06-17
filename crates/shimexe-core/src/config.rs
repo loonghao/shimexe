@@ -38,6 +38,9 @@ pub struct ShimCore {
     /// Working directory for the executable
     #[serde(default)]
     pub cwd: Option<String>,
+    /// Original download URL (for HTTP-based shims)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub download_url: Option<String>,
 }
 
 /// Optional metadata for the shim
@@ -202,9 +205,38 @@ impl ShimConfig {
     pub fn get_executable_path(&self) -> Result<PathBuf> {
         let expanded_path = expand_env_vars(&self.shim.path)?;
 
-        // Check if it's a URL
-        if crate::downloader::Downloader::is_url(&expanded_path) {
-            // For URLs, we need to determine where the downloaded file would be
+        // Check if we have a download_url (indicating this was originally from HTTP)
+        if let Some(ref download_url) = self.shim.download_url {
+            // This shim was created from an HTTP URL
+            let filename = crate::downloader::Downloader::extract_filename_from_url(download_url)
+                .ok_or_else(|| {
+                ShimError::Config(format!(
+                    "Could not extract filename from download URL: {}",
+                    download_url
+                ))
+            })?;
+
+            // Try to find the downloaded file in the expected location
+            // First try relative to home directory
+            if let Some(home_dir) = dirs::home_dir() {
+                let download_path = home_dir
+                    .join(".shimexe")
+                    .join(&self.shim.name)
+                    .join("bin")
+                    .join(&filename);
+
+                if download_path.exists() {
+                    return Ok(download_path);
+                }
+            }
+
+            // If not found, return an error indicating download is needed
+            Err(ShimError::ExecutableNotFound(format!(
+                "Executable not found for download URL: {}. Download may be required.",
+                download_url
+            )))
+        } else if crate::downloader::Downloader::is_url(&expanded_path) {
+            // Legacy: path is still a URL (for backward compatibility)
             let filename = crate::downloader::Downloader::extract_filename_from_url(&expanded_path)
                 .ok_or_else(|| {
                     ShimError::Config(format!(
@@ -214,7 +246,6 @@ impl ShimConfig {
                 })?;
 
             // Try to find the downloaded file in the expected location
-            // First try relative to home directory
             if let Some(home_dir) = dirs::home_dir() {
                 let download_path = home_dir
                     .join(".shimexe")
@@ -243,6 +274,11 @@ impl ShimConfig {
                     .map_err(|_| ShimError::ExecutableNotFound(self.shim.path.clone()))
             }
         }
+    }
+
+    /// Get the download URL for this shim (if it was created from HTTP)
+    pub fn get_download_url(&self) -> Option<&String> {
+        self.shim.download_url.as_ref()
     }
 }
 
@@ -315,6 +351,7 @@ description = "Test shim"
                 path: "echo".to_string(),
                 args: vec![],
                 cwd: None,
+                download_url: None,
             },
             args: Default::default(),
             env: HashMap::new(),
@@ -330,6 +367,7 @@ description = "Test shim"
                 path: "echo".to_string(),
                 args: vec![],
                 cwd: None,
+                download_url: None,
             },
             args: Default::default(),
             env: HashMap::new(),
@@ -345,6 +383,7 @@ description = "Test shim"
                 path: "".to_string(),
                 args: vec![],
                 cwd: None,
+                download_url: None,
             },
             args: Default::default(),
             env: HashMap::new(),
@@ -362,6 +401,7 @@ description = "Test shim"
                 path: "echo".to_string(),
                 args: vec!["hello".to_string()],
                 cwd: None,
+                download_url: None,
             },
             args: Default::default(),
             env: {
@@ -399,6 +439,7 @@ description = "Test shim"
                 path: "${TEST_VAR}/bin/test".to_string(),
                 args: vec!["${TEST_VAR}".to_string()],
                 cwd: Some("${TEST_VAR}/work".to_string()),
+                download_url: None,
             },
             args: Default::default(),
             env: {
@@ -509,5 +550,61 @@ inline = "{{{{env('CONFIG_PATH', '/default/config')}}}} {{{{args('--help')}}}}"
             config.args.inline.unwrap(),
             "{{env('CONFIG_PATH', '/default/config')}} {{args('--help')}}"
         );
+    }
+
+    #[test]
+    fn test_shim_config_with_download_url() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(
+            temp_file,
+            r#"
+[shim]
+name = "test-tool"
+path = "/home/user/.shimexe/test-tool/bin/test-tool.exe"
+download_url = "https://example.com/test-tool.exe"
+
+[metadata]
+description = "Test shim with download URL"
+        "#
+        )
+        .unwrap();
+
+        let config = ShimConfig::from_file(temp_file.path()).unwrap();
+        assert_eq!(config.shim.name, "test-tool");
+        assert_eq!(
+            config.shim.path,
+            "/home/user/.shimexe/test-tool/bin/test-tool.exe"
+        );
+        assert_eq!(
+            config.shim.download_url,
+            Some("https://example.com/test-tool.exe".to_string())
+        );
+        assert_eq!(
+            config.get_download_url(),
+            Some(&"https://example.com/test-tool.exe".to_string())
+        );
+    }
+
+    #[test]
+    fn test_shim_config_without_download_url() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(
+            temp_file,
+            r#"
+[shim]
+name = "local-tool"
+path = "/usr/bin/local-tool"
+
+[metadata]
+description = "Test shim without download URL"
+        "#
+        )
+        .unwrap();
+
+        let config = ShimConfig::from_file(temp_file.path()).unwrap();
+        assert_eq!(config.shim.name, "local-tool");
+        assert_eq!(config.shim.path, "/usr/bin/local-tool");
+        assert_eq!(config.shim.download_url, None);
+        assert_eq!(config.get_download_url(), None);
     }
 }
