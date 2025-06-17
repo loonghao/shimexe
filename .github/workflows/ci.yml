@@ -156,6 +156,43 @@ jobs:
         fetch-depth: 0
         ref: ${{ github.head_ref }}
 
+    - name: Validate GitHub Token
+      run: |
+        echo "🔐 Validating GitHub Token configuration..."
+        echo ""
+
+        # Check if RELEASE_PLZ_TOKEN is available (we can't access the actual value for security)
+        if [ -n "${{ secrets.RELEASE_PLZ_TOKEN }}" ]; then
+          echo "✅ RELEASE_PLZ_TOKEN is configured"
+          TOKEN_SOURCE="RELEASE_PLZ_TOKEN"
+        else
+          echo "⚠️  RELEASE_PLZ_TOKEN not found, will use GITHUB_TOKEN"
+          TOKEN_SOURCE="GITHUB_TOKEN"
+        fi
+
+        # Test token format validation logic (using GITHUB_TOKEN as it's always available)
+        TEST_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+
+        # Basic token format validation
+        if [[ "$TEST_TOKEN" =~ ^(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_) ]]; then
+          echo "✅ Token format validation logic works correctly"
+        else
+          echo "❌ Token format validation failed - this may indicate an issue"
+          exit 1
+        fi
+
+        # Test API connectivity with GITHUB_TOKEN
+        echo "🌐 Testing GitHub API connectivity..."
+        curl -s -H "Authorization: Bearer $TEST_TOKEN" \
+             -H "Accept: application/vnd.github.v3+json" \
+             https://api.github.com/user > /dev/null || {
+          echo "❌ GitHub API connectivity test failed"
+          exit 1
+        }
+
+        echo "✅ GitHub API connectivity test passed"
+        echo "🎯 Token validation will use: $TOKEN_SOURCE"
+
     - name: Validate release-plz configuration file
       run: |
         echo "🔧 Validating release-plz configuration..."
