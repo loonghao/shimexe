@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.0](https://github.com/loonghao/shimexe/compare/v0.1.4...v0.2.0) - 2025-06-17
+
+### Added
+
+- enhance HTTP URL support with persistent download tracking
+- add HTTP URL support for automatic executable download
+
+### Fixed
+
+- optimize release workflow trigger conditions
+
+### Other
+
+- move GitHub token validation to CI workflow
+- optimize CI/CD workflows and fix GitHub API auth
+- update README and add comprehensive unit tests
+
 ## [0.1.4](https://github.com/loonghao/shimexe/compare/v0.1.3...v0.1.4) - 2025-06-17
 
 ### Added
