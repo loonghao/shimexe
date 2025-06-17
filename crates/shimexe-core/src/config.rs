@@ -149,6 +149,39 @@ pub struct ShimCore {
     /// Original download URL (for HTTP-based shims)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub download_url: Option<String>,
+    /// Type of source (file, archive, url)
+    #[serde(default)]
+    pub source_type: SourceType,
+    /// For archives: list of extracted executables
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extracted_executables: Vec<ExtractedExecutable>,
+}
+
+/// Source type for the shim
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SourceType {
+    /// Regular file or executable
+    #[default]
+    File,
+    /// Archive file (zip, tar.gz, etc.)
+    Archive,
+    /// HTTP URL
+    Url,
+}
+
+/// Information about an extracted executable from an archive
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedExecutable {
+    /// Name of the executable (without extension)
+    pub name: String,
+    /// Relative path within the extracted archive
+    pub path: String,
+    /// Full path to the executable
+    pub full_path: String,
+    /// Whether this executable is the primary one for this shim
+    #[serde(default)]
+    pub is_primary: bool,
 }
 
 /// Optional metadata for the shim
@@ -378,73 +411,108 @@ impl ShimConfig {
     pub fn get_executable_path(&self) -> Result<PathBuf> {
         let expanded_path = expand_env_vars(&self.shim.path)?;
 
-        // Check if we have a download_url (indicating this was originally from HTTP)
-        if let Some(ref download_url) = self.shim.download_url {
-            // This shim was created from an HTTP URL
-            let filename = crate::downloader::Downloader::extract_filename_from_url(download_url)
-                .ok_or_else(|| {
-                ShimError::Config(format!(
-                    "Could not extract filename from download URL: {}",
-                    download_url
-                ))
-            })?;
-
-            // Try to find the downloaded file in the expected location
-            // First try relative to home directory
-            if let Some(home_dir) = dirs::home_dir() {
-                let download_path = home_dir
-                    .join(".shimexe")
-                    .join(&self.shim.name)
-                    .join("bin")
-                    .join(&filename);
-
-                if download_path.exists() {
-                    return Ok(download_path);
-                }
-            }
-
-            // If not found, return an error indicating download is needed
-            Err(ShimError::ExecutableNotFound(format!(
-                "Executable not found for download URL: {}. Download may be required.",
-                download_url
-            )))
-        } else if crate::downloader::Downloader::is_url(&expanded_path) {
-            // Legacy: path is still a URL (for backward compatibility)
-            let filename = crate::downloader::Downloader::extract_filename_from_url(&expanded_path)
-                .ok_or_else(|| {
-                    ShimError::Config(format!(
-                        "Could not extract filename from URL: {}",
-                        expanded_path
+        match self.shim.source_type {
+            SourceType::Archive => {
+                // For archives, use the primary executable or the first one
+                if let Some(primary_exe) = self
+                    .shim
+                    .extracted_executables
+                    .iter()
+                    .find(|exe| exe.is_primary)
+                    .or_else(|| self.shim.extracted_executables.first())
+                {
+                    let path = PathBuf::from(&primary_exe.full_path);
+                    if path.exists() {
+                        Ok(path)
+                    } else {
+                        Err(ShimError::ExecutableNotFound(format!(
+                            "Extracted executable not found: {}. Re-extraction may be required.",
+                            primary_exe.full_path
+                        )))
+                    }
+                } else {
+                    Err(ShimError::ExecutableNotFound(
+                        "No extracted executables found in archive configuration".to_string(),
                     ))
-                })?;
-
-            // Try to find the downloaded file in the expected location
-            if let Some(home_dir) = dirs::home_dir() {
-                let download_path = home_dir
-                    .join(".shimexe")
-                    .join(&self.shim.name)
-                    .join("bin")
-                    .join(&filename);
-
-                if download_path.exists() {
-                    return Ok(download_path);
                 }
             }
+            SourceType::Url => {
+                // Check if we have a download_url (indicating this was originally from HTTP)
+                if let Some(ref download_url) = self.shim.download_url {
+                    // This shim was created from an HTTP URL
+                    let filename =
+                        crate::downloader::Downloader::extract_filename_from_url(download_url)
+                            .ok_or_else(|| {
+                                ShimError::Config(format!(
+                                    "Could not extract filename from download URL: {}",
+                                    download_url
+                                ))
+                            })?;
 
-            // If not found, return an error indicating download is needed
-            Err(ShimError::ExecutableNotFound(format!(
-                "Executable not found for URL: {}. Download may be required.",
-                expanded_path
-            )))
-        } else {
-            let path = PathBuf::from(expanded_path);
+                    // Try to find the downloaded file in the expected location
+                    // First try relative to home directory
+                    if let Some(home_dir) = dirs::home_dir() {
+                        let download_path = home_dir
+                            .join(".shimexe")
+                            .join(&self.shim.name)
+                            .join("bin")
+                            .join(&filename);
 
-            if path.is_absolute() {
-                Ok(path)
-            } else {
-                // Try to find in PATH
-                which::which(&path)
-                    .map_err(|_| ShimError::ExecutableNotFound(self.shim.path.clone()))
+                        if download_path.exists() {
+                            return Ok(download_path);
+                        }
+                    }
+
+                    // If not found, return an error indicating download is needed
+                    Err(ShimError::ExecutableNotFound(format!(
+                        "Executable not found for download URL: {}. Download may be required.",
+                        download_url
+                    )))
+                } else if crate::downloader::Downloader::is_url(&expanded_path) {
+                    // Legacy: path is still a URL (for backward compatibility)
+                    let filename =
+                        crate::downloader::Downloader::extract_filename_from_url(&expanded_path)
+                            .ok_or_else(|| {
+                                ShimError::Config(format!(
+                                    "Could not extract filename from URL: {}",
+                                    expanded_path
+                                ))
+                            })?;
+
+                    // Try to find the downloaded file in the expected location
+                    if let Some(home_dir) = dirs::home_dir() {
+                        let download_path = home_dir
+                            .join(".shimexe")
+                            .join(&self.shim.name)
+                            .join("bin")
+                            .join(&filename);
+
+                        if download_path.exists() {
+                            return Ok(download_path);
+                        }
+                    }
+
+                    // If not found, return an error indicating download is needed
+                    Err(ShimError::ExecutableNotFound(format!(
+                        "Executable not found for URL: {}. Download may be required.",
+                        expanded_path
+                    )))
+                } else {
+                    Err(ShimError::Config(
+                        "URL source type specified but no download URL found".to_string(),
+                    ))
+                }
+            }
+            SourceType::File => {
+                let path = PathBuf::from(expanded_path);
+
+                if path.is_absolute() {
+                    Ok(path)
+                } else {
+                    // Try to find in PATH
+                    which::which(&path)
+                        .map_err(|_| ShimError::ExecutableNotFound(self.shim.path.clone()))
+                }
             }
         }
     }
@@ -525,6 +593,8 @@ description = "Test shim"
                 args: vec![],
                 cwd: None,
                 download_url: None,
+                source_type: SourceType::File,
+                extracted_executables: vec![],
             },
             args: Default::default(),
             env: HashMap::new(),
@@ -541,6 +611,8 @@ description = "Test shim"
                 args: vec![],
                 cwd: None,
                 download_url: None,
+                source_type: SourceType::File,
+                extracted_executables: vec![],
             },
             args: Default::default(),
             env: HashMap::new(),
@@ -557,6 +629,8 @@ description = "Test shim"
                 args: vec![],
                 cwd: None,
                 download_url: None,
+                source_type: SourceType::File,
+                extracted_executables: vec![],
             },
             args: Default::default(),
             env: HashMap::new(),
@@ -575,6 +649,8 @@ description = "Test shim"
                 args: vec!["hello".to_string()],
                 cwd: None,
                 download_url: None,
+                source_type: SourceType::File,
+                extracted_executables: vec![],
             },
             args: Default::default(),
             env: {
@@ -613,6 +689,8 @@ description = "Test shim"
                 args: vec!["${TEST_VAR}".to_string()],
                 cwd: Some("${TEST_VAR}/work".to_string()),
                 download_url: None,
+                source_type: SourceType::File,
+                extracted_executables: vec![],
             },
             args: Default::default(),
             env: {

@@ -140,6 +140,8 @@ jobs:
             README.md
             README_zh.md
             LICENSE
+            scripts/install.sh
+            scripts/install.ps1
 
 
 
@@ -157,57 +159,43 @@ jobs:
         $version = "${{ github.ref_name }}" -replace "^v", ""
         echo "version=$version" >> $env:GITHUB_OUTPUT
 
-    - name: Create Chocolatey Package
+    - name: Prepare Chocolatey Package
       run: |
         $version = "${{ steps.get_version.outputs.version }}"
-        mkdir chocolatey
-        cd chocolatey
 
-        # Create nuspec file
-        @"
-        <?xml version="1.0" encoding="utf-8"?>
-        <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
-          <metadata>
-            <id>shimexe</id>
-            <version>$version</version>
-            <title>shimexe</title>
-            <authors>Hal</authors>
-            <owners>loonghao</owners>
-            <licenseUrl>https://github.com/loonghao/shimexe/blob/main/LICENSE</licenseUrl>
-            <projectUrl>https://github.com/loonghao/shimexe</projectUrl>
-            <requireLicenseAcceptance>false</requireLicenseAcceptance>
-            <description>A modern, cross-platform executable shim manager with environment variable expansion and TOML configuration support</description>
-            <summary>Cross-platform executable shim manager</summary>
-            <tags>shim executable wrapper cross-platform cli</tags>
-          </metadata>
-          <files>
-            <file src="tools\**" target="tools" />
-          </files>
-        </package>
-        "@ | Out-File -FilePath "shimexe.nuspec" -Encoding UTF8
+        # Copy package files to working directory
+        Copy-Item -Path "pkg/choco" -Destination "chocolatey" -Recurse
 
-        # Create tools directory and install script
-        mkdir tools
-        @"
-        `$ErrorActionPreference = 'Stop'
-        `$packageName = 'shimexe'
-        `$url64 = 'https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-x86_64-pc-windows-msvc.zip'
-        `$checksum64 = ''
+        # Update version in nuspec
+        $nuspecPath = "chocolatey/shimexe.nuspec"
+        $nuspecContent = Get-Content $nuspecPath -Raw
+        $nuspecContent = $nuspecContent -replace '<version>[\d\.]+</version>', "<version>$version</version>"
+        Set-Content -Path $nuspecPath -Value $nuspecContent -Encoding UTF8
 
-        `$packageArgs = @{
-          packageName   = `$packageName
-          fileType      = 'zip'
-          url64bit      = `$url64
-          checksum64    = `$checksum64
-          checksumType64= 'sha256'
-          silentArgs    = ''
-          validExitCodes= @(0)
-          softwareName  = 'shimexe*'
-          destination   = "`$(Split-Path -parent `$MyInvocation.MyCommand.Definition)"
+        # Get checksum for the Windows release
+        $url64 = "https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-x86_64-pc-windows-msvc.zip"
+
+        # Wait a bit for the release to be available
+        Start-Sleep -Seconds 30
+
+        try {
+          $tempFile = [System.IO.Path]::GetTempFileName()
+          Invoke-WebRequest -Uri $url64 -OutFile $tempFile -UseBasicParsing
+          $hash = Get-FileHash -Path $tempFile -Algorithm SHA256
+          Remove-Item $tempFile -Force
+          $checksum64 = $hash.Hash
+
+          # Update install script with correct URL and checksum
+          $installScriptPath = "chocolatey/tools/chocolateyinstall.ps1"
+          $installScript = Get-Content $installScriptPath -Raw
+          $installScript = $installScript -replace "url64 = 'https://github\.com/[^']+/releases/download/v[\d\.]+/[^']+\.zip'", "url64 = '$url64'"
+          $installScript = $installScript -replace "checksum64 = '[^']*'", "checksum64 = '$checksum64'"
+          Set-Content -Path $installScriptPath -Value $installScript -Encoding UTF8
+
+          Write-Host "Updated Chocolatey package with checksum: $checksum64"
+        } catch {
+          Write-Warning "Failed to get checksum, using empty checksum: $_"
         }
-
-        Install-ChocolateyZipPackage @packageArgs
-        "@ | Out-File -FilePath "tools\chocolateyinstall.ps1" -Encoding UTF8
 
     - name: Pack and Push to Chocolatey
       uses: crazy-max/ghaction-chocolatey@v3
@@ -221,3 +209,38 @@ jobs:
         args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ env.CHOCOLATEY_API_KEY }}
       env:
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+  publish-install-scripts:
+    name: Publish Install Scripts
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        version="${{ github.ref_name }}"
+        version="${version#v}"
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    - name: Update install scripts with version
+      run: |
+        version="${{ steps.get_version.outputs.version }}"
+
+        # Update install.sh with correct version
+        sed -i "s/SHIMEXE_VERSION=\"latest\"/SHIMEXE_VERSION=\"$version\"/" scripts/install.sh
+
+        # Update install.ps1 with correct version
+        sed -i "s/\$Version = \"latest\"/\$Version = \"$version\"/" scripts/install.ps1
+
+    - name: Upload install scripts to release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          scripts/install.sh
+          scripts/install.ps1
+        tag_name: ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

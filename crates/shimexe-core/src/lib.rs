@@ -3,6 +3,7 @@
 //! Core library for shimexe - a modern, cross-platform executable shim manager
 //! with environment variable expansion and TOML configuration support.
 
+pub mod archive;
 pub mod config;
 pub mod downloader;
 pub mod error;
@@ -12,7 +13,14 @@ pub mod traits;
 pub mod updater;
 pub mod utils;
 
-pub use config::{AutoUpdate, ShimConfig, ShimCore, ShimMetadata, UpdateProvider, VersionCheck};
+#[cfg(test)]
+mod archive_tests;
+
+pub use archive::ArchiveExtractor;
+pub use config::{
+    AutoUpdate, ExtractedExecutable, ShimConfig, ShimCore, ShimMetadata, SourceType,
+    UpdateProvider, VersionCheck,
+};
 pub use downloader::Downloader;
 pub use error::{Result, ShimError};
 pub use runner::ShimRunner;

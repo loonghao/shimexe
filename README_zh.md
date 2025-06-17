@@ -32,6 +32,33 @@ cargo install shimexe
 choco install shimexe
 ```
 
+### 通过 Scoop 安装 (Windows)
+
+```powershell
+scoop install shimexe
+```
+
+### 快速安装脚本
+
+**Unix 系统 (macOS, Linux):**
+```bash
+curl -LsSf https://github.com/loonghao/shimexe/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://github.com/loonghao/shimexe/install.ps1 | iex
+```
+
+**安装指定版本:**
+```bash
+# Unix
+curl -LsSf https://github.com/loonghao/shimexe/0.2.1/install.sh | sh
+
+# Windows
+$env:SHIMEXE_VERSION="0.2.1"; irm https://github.com/loonghao/shimexe/install.ps1 | iex
+```
+
 ### 从 GitHub Releases 下载
 
 从 [GitHub Releases](https://github.com/loonghao/shimexe/releases) 下载最新的二进制文件。
@@ -56,6 +83,39 @@ choco install shimexe
 4. 运行您的 shim:
    ```bash
    rust
+   ```
+
+### HTTP URL 下载
+
+1. 下载并创建具有明确名称的 shim：
+   ```bash
+   shimexe add it --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+   ```
+
+2. 从 URL 自动推断名称：
+   ```bash
+   shimexe add --path https://example.com/tools/my-tool.exe
+   # 自动创建 'my-tool' shim
+   ```
+
+### 压缩包支持（新功能！）
+
+shimexe 现在支持下载和解压压缩包（zip 文件），并自动发现可执行文件：
+
+1. 下载并解压 zip 压缩包：
+   ```bash
+   shimexe add plz --path https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip
+   ```
+
+2. 自动解压并为所有可执行文件创建 shim：
+   ```bash
+   shimexe add tools --path https://example.com/multi-tool-package.zip
+   # 解压压缩包并为找到的所有 .exe 文件创建 shim
+   ```
+
+3. 运行你的 shim（如果缺失会自动下载和解压）：
+   ```bash
+   plz --help
    ```
 
 ## 配置格式

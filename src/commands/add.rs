@@ -75,31 +75,10 @@ impl AddCommand {
             }
         }
 
-        // Create shim configuration
-        let download_url = if Downloader::is_url(&self.path) {
-            Some(self.path.clone())
-        } else {
-            None
-        };
-
-        let config = ShimConfig {
-            shim: ShimCore {
-                name: shim_name.clone(),
-                path: actual_path.clone(),
-                args: self.args.clone(),
-                cwd: self.cwd.clone(),
-                download_url,
-            },
-            args: Default::default(),
-            env: env_vars,
-            metadata: ShimMetadata {
-                description: self.description.clone(),
-                version: Some("1.0.0".to_string()),
-                author: None,
-                tags: vec![],
-            },
-            auto_update: None,
-        };
+        // Create configuration based on source type
+        let config = self
+            .create_shim_config(&shim_name, &actual_path, env_vars, &shim_dir)
+            .await?;
 
         // Validate configuration
         config.validate()?;
@@ -122,7 +101,7 @@ impl AddCommand {
         Ok(())
     }
 
-    /// Resolve the shim name and actual path, handling HTTP URLs and name inference
+    /// Resolve the shim name and actual path, handling HTTP URLs, archives, and name inference
     async fn resolve_name_and_path(&self, shim_dir: &Option<PathBuf>) -> Result<(String, String)> {
         let is_url = Downloader::is_url(&self.path);
 
@@ -137,11 +116,6 @@ impl AddCommand {
                 })?
             };
 
-            // Extract filename from URL
-            let filename = Downloader::extract_filename_from_url(&self.path).ok_or_else(|| {
-                anyhow::anyhow!("Could not extract filename from URL: {}", self.path)
-            })?;
-
             // Determine base directory for downloads
             let base_dir = if let Some(ref dir) = shim_dir {
                 dir.clone()
@@ -151,24 +125,57 @@ impl AddCommand {
                     .join(".shimexe")
             };
 
-            // Generate download path
-            let download_path =
-                Downloader::generate_download_path(&base_dir, &shim_name, &filename);
+            // Check if this is an archive URL
+            if shimexe_core::ArchiveExtractor::is_archive_url(&self.path) {
+                // Handle archive download and extraction
+                let downloader = Downloader::new();
+                let executables = downloader
+                    .download_and_extract_archive(&self.path, &base_dir, &shim_name)
+                    .await
+                    .with_context(|| {
+                        format!("Failed to download and extract archive from {}", self.path)
+                    })?;
 
-            // Download the file if it doesn't exist
-            let downloader = Downloader::new();
-            let downloaded = downloader
-                .download_if_missing(&self.path, &download_path)
-                .await
-                .with_context(|| format!("Failed to download file from {}", self.path))?;
+                if executables.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "No executables found in archive: {}",
+                        self.path
+                    ));
+                }
 
-            if downloaded {
-                info!("Downloaded {} to {}", self.path, download_path.display());
+                // Use the first executable as the primary one
+                let primary_executable = &executables[0];
+                info!(
+                    "Extracted {} executables from archive, using {} as primary",
+                    executables.len(),
+                    primary_executable.display()
+                );
+
+                Ok((shim_name, primary_executable.to_string_lossy().to_string()))
             } else {
-                debug!("File already exists at {}", download_path.display());
-            }
+                // Handle regular file download
+                let filename =
+                    Downloader::extract_filename_from_url(&self.path).ok_or_else(|| {
+                        anyhow::anyhow!("Could not extract filename from URL: {}", self.path)
+                    })?;
 
-            Ok((shim_name, download_path.to_string_lossy().to_string()))
+                let download_path =
+                    Downloader::generate_download_path(&base_dir, &shim_name, &filename);
+
+                let downloader = Downloader::new();
+                let downloaded = downloader
+                    .download_if_missing(&self.path, &download_path)
+                    .await
+                    .with_context(|| format!("Failed to download file from {}", self.path))?;
+
+                if downloaded {
+                    info!("Downloaded {} to {}", self.path, download_path.display());
+                } else {
+                    debug!("File already exists at {}", download_path.display());
+                }
+
+                Ok((shim_name, download_path.to_string_lossy().to_string()))
+            }
         } else {
             // Handle local path
             let shim_name = if let Some(ref name) = self.name {
@@ -186,6 +193,97 @@ impl AddCommand {
 
             Ok((shim_name, self.path.clone()))
         }
+    }
+
+    /// Create shim configuration based on source type
+    async fn create_shim_config(
+        &self,
+        shim_name: &str,
+        actual_path: &str,
+        env_vars: HashMap<String, String>,
+        shim_dir: &Option<PathBuf>,
+    ) -> Result<ShimConfig> {
+        let is_url = Downloader::is_url(&self.path);
+        let is_archive_url = is_url && shimexe_core::ArchiveExtractor::is_archive_url(&self.path);
+
+        let (source_type, download_url, extracted_executables) = if is_archive_url {
+            // Handle archive
+            let base_dir = if let Some(ref dir) = shim_dir {
+                dir.clone()
+            } else {
+                dirs::home_dir()
+                    .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
+                    .join(".shimexe")
+            };
+
+            let downloader = Downloader::new();
+            let executables = downloader
+                .download_and_extract_archive(&self.path, &base_dir, shim_name)
+                .await
+                .with_context(|| {
+                    format!("Failed to download and extract archive from {}", self.path)
+                })?;
+
+            let extracted_executables = executables
+                .into_iter()
+                .enumerate()
+                .map(|(i, path)| {
+                    let name = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+
+                    shimexe_core::ExtractedExecutable {
+                        name,
+                        path: path
+                            .strip_prefix(&base_dir.join(shim_name).join("bin"))
+                            .unwrap_or(&path)
+                            .to_string_lossy()
+                            .to_string(),
+                        full_path: path.to_string_lossy().to_string(),
+                        is_primary: i == 0, // First executable is primary
+                    }
+                })
+                .collect();
+
+            (
+                shimexe_core::SourceType::Archive,
+                Some(self.path.clone()),
+                extracted_executables,
+            )
+        } else if is_url {
+            // Handle regular URL
+            (
+                shimexe_core::SourceType::Url,
+                Some(self.path.clone()),
+                vec![],
+            )
+        } else {
+            // Handle local file
+            (shimexe_core::SourceType::File, None, vec![])
+        };
+
+        Ok(ShimConfig {
+            shim: ShimCore {
+                name: shim_name.to_string(),
+                path: actual_path.to_string(),
+                args: self.args.clone(),
+                cwd: self.cwd.clone(),
+                download_url,
+                source_type,
+                extracted_executables,
+            },
+            args: Default::default(),
+            env: env_vars,
+            metadata: ShimMetadata {
+                description: self.description.clone(),
+                version: Some("1.0.0".to_string()),
+                author: None,
+                tags: vec![],
+            },
+            auto_update: None,
+        })
     }
 }
 

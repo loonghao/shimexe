@@ -1,10 +1,11 @@
+use crate::archive::ArchiveExtractor;
 use anyhow::{Context, Result};
 use futures_util::StreamExt;
 use reqwest::Client;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// HTTP downloader for remote executables
 pub struct Downloader {
@@ -45,14 +46,18 @@ impl Downloader {
     /// Examples:
     /// - https://github.com/user/repo/releases/download/v1.0/app.exe -> "app"
     /// - https://example.com/tools/my-tool.exe -> "my-tool"
+    /// - https://github.com/user/repo/releases/download/v1.0/app.zip -> "app"
     pub fn infer_app_name_from_url(url: &str) -> Option<String> {
         let filename = Self::extract_filename_from_url(url)?;
 
-        // Remove common executable extensions
+        // Remove common executable and archive extensions
         let name = filename
             .strip_suffix(".exe")
             .or_else(|| filename.strip_suffix(".bin"))
             .or_else(|| filename.strip_suffix(".app"))
+            .or_else(|| filename.strip_suffix(".zip"))
+            .or_else(|| filename.strip_suffix(".tar.gz"))
+            .or_else(|| filename.strip_suffix(".tgz"))
             .unwrap_or(&filename);
 
         if name.is_empty() {
@@ -262,6 +267,75 @@ impl Downloader {
 
         Ok(results)
     }
+
+    /// Download and extract archive, returning paths to all extracted executables
+    pub async fn download_and_extract_archive(
+        &self,
+        url: &str,
+        base_dir: &Path,
+        app_name: &str,
+    ) -> Result<Vec<PathBuf>> {
+        let filename = Self::extract_filename_from_url(url)
+            .ok_or_else(|| anyhow::anyhow!("Could not extract filename from URL: {}", url))?;
+
+        // Download the archive
+        let download_path = Self::generate_download_path(base_dir, app_name, &filename);
+        let downloaded = self.download_if_missing(url, &download_path).await?;
+
+        if downloaded {
+            info!("Downloaded archive {} to {}", url, download_path.display());
+        }
+
+        // Check if it's an archive that needs extraction
+        if ArchiveExtractor::is_archive(&download_path) {
+            info!("Extracting archive: {}", download_path.display());
+
+            // Extract to the same directory as the archive
+            let extract_dir = download_path
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("Could not determine extraction directory"))?;
+
+            let executables = ArchiveExtractor::extract_archive(&download_path, extract_dir)
+                .with_context(|| {
+                    format!("Failed to extract archive: {}", download_path.display())
+                })?;
+
+            if executables.is_empty() {
+                warn!(
+                    "No executables found in archive: {}",
+                    download_path.display()
+                );
+            } else {
+                info!("Found {} executables in archive", executables.len());
+            }
+
+            Ok(executables)
+        } else {
+            // Not an archive, return the downloaded file if it's executable
+            if Self::is_executable_file(&download_path) {
+                Ok(vec![download_path])
+            } else {
+                Ok(vec![])
+            }
+        }
+    }
+
+    /// Check if a file is an executable based on its extension
+    fn is_executable_file(path: &Path) -> bool {
+        if let Some(extension) = path.extension() {
+            match extension.to_str() {
+                Some("exe") | Some("bin") | Some("app") => true,
+                Some(ext) if cfg!(unix) => {
+                    // On Unix, also check for files without extension that might be executables
+                    ext.is_empty() || matches!(ext, "sh" | "bash" | "zsh" | "fish")
+                }
+                _ => false,
+            }
+        } else {
+            // Files without extension might be executables on Unix
+            cfg!(unix)
+        }
+    }
 }
 
 impl Default for Downloader {
@@ -334,10 +408,10 @@ mod tests {
             Some("tool".to_string())
         );
 
-        // Test with multiple extensions (only removes known executable extensions)
+        // Test with multiple extensions (removes known archive extensions too)
         assert_eq!(
             Downloader::infer_app_name_from_url("https://example.com/my-tool.tar.gz"),
-            Some("my-tool.tar.gz".to_string())
+            Some("my-tool".to_string())
         );
 
         // Test with no extension
