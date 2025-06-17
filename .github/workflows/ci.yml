@@ -78,8 +78,8 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
-  release_plz_dry_run:
-    name: Release-plz Dry Run
+  release_plz_check:
+    name: Release-plz Version Check
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -95,10 +95,25 @@ jobs:
     - name: Install release-plz
       run: cargo install release-plz --locked
 
-    - name: Run release-plz dry-run
+    - name: Run release-plz update (dry-run)
       run: |
-        echo "🧪 Running release-plz dry-run to check what would be released..."
-        echo "This validates the release-plz configuration and shows what packages would be published."
+        echo "🔍 Checking what version updates would be made..."
+        echo "This analyzes commits since last release and determines version bumps."
+        echo ""
+        echo "📋 Current versions:"
+        grep -E "^version.*=" Cargo.toml || echo "Using workspace version"
+        grep "version.*=" Cargo.toml | head -1
+        echo ""
+        echo "🧪 Running release-plz update to see what changes would be made..."
+        release-plz update --dry-run
+        echo ""
+        echo "✅ Release-plz update check completed"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run release-plz release dry-run
+      run: |
+        echo "🚀 Checking what would be released..."
         release-plz release --dry-run --git-token ${{ secrets.GITHUB_TOKEN }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
