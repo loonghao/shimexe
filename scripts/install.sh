@@ -39,20 +39,36 @@ success() {
 detect_platform() {
     local os
     local arch
-    
+
     case "$(uname -s)" in
         Linux*)     os="unknown-linux-gnu" ;;
         Darwin*)    os="apple-darwin" ;;
         *)          error "Unsupported operating system: $(uname -s)"; exit 1 ;;
     esac
-    
+
     case "$(uname -m)" in
         x86_64|amd64)   arch="x86_64" ;;
         aarch64|arm64)  arch="aarch64" ;;
         *)              error "Unsupported architecture: $(uname -m)"; exit 1 ;;
     esac
-    
+
     echo "${arch}-${os}"
+}
+
+# Map platform to release file naming convention
+get_release_filename() {
+    local platform="$1"
+
+    case "$platform" in
+        "x86_64-unknown-linux-gnu")    echo "shimexe-Linux-gnu-x86_64.tar.gz" ;;
+        "aarch64-unknown-linux-gnu")   echo "shimexe-Linux-gnu-arm64.tar.gz" ;;
+        "x86_64-unknown-linux-musl")   echo "shimexe-Linux-musl-x86_64.tar.gz" ;;
+        "aarch64-unknown-linux-musl")  echo "shimexe-Linux-musl-arm64.tar.gz" ;;
+        "x86_64-apple-darwin")         echo "shimexe-macOS-x86_64.tar.gz" ;;
+        "aarch64-apple-darwin")        echo "shimexe-macOS-arm64.tar.gz" ;;
+        "x86_64-unknown-freebsd")      echo "shimexe-FreeBSD-x86_64.tar.gz" ;;
+        *)                             echo "shimexe-${platform}.tar.gz" ;;
+    esac
 }
 
 # Get latest version from GitHub API
@@ -91,10 +107,10 @@ install_shimexe() {
     fi
     
     info "Installing shimexe v${version} for ${platform}..."
-    
-    # Construct download URL
-    archive_name="shimexe-${platform}.tar.gz"
-    download_url="${SHIMEXE_BASE_URL}/download/v${version}/${archive_name}"
+
+    # Construct download URL using correct release file naming
+    archive_name=$(get_release_filename "$platform")
+    download_url="${SHIMEXE_BASE_URL}/download/shimexe-v${version}/${archive_name}"
     
     # Create temporary directory
     temp_dir=$(mktemp -d)

@@ -39,10 +39,23 @@ function Write-Success {
     Write-Host "[SUCCESS] $Message" -ForegroundColor Green
 }
 
-# Detect platform
+# Detect platform and map to release naming convention
 function Get-Platform {
     $arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else { "i686" }
     return "$arch-pc-windows-msvc"
+}
+
+# Map platform to release file naming convention
+function Get-ReleaseFileName {
+    param([string]$Platform)
+
+    # Map from Rust target triple to release file naming
+    switch ($Platform) {
+        "x86_64-pc-windows-msvc" { return "shimexe-Windows-msvc-x86_64.zip" }
+        "i686-pc-windows-msvc" { return "shimexe-Windows-msvc-i686.zip" }
+        "aarch64-pc-windows-msvc" { return "shimexe-Windows-msvc-arm64.zip" }
+        default { return "shimexe-$Platform.zip" }
+    }
 }
 
 # Get latest version from GitHub API
@@ -72,10 +85,10 @@ function Install-Shimexe {
     }
     
     Write-Info "Installing shimexe v$Version for $platform..."
-    
-    # Construct download URL
-    $archiveName = "shimexe-$platform.zip"
-    $downloadUrl = "$BaseUrl/download/v$Version/$archiveName"
+
+    # Construct download URL using correct release file naming
+    $archiveName = Get-ReleaseFileName -Platform $platform
+    $downloadUrl = "$BaseUrl/download/shimexe-v$Version/$archiveName"
     
     # Create temporary directory
     $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
