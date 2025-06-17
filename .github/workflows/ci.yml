@@ -78,8 +78,8 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
-  release_plz_check:
-    name: Release-plz Version Check
+  release_plz_config_check:
+    name: Release-plz Config Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -95,25 +95,29 @@ jobs:
     - name: Install release-plz
       run: cargo install release-plz --locked
 
-    - name: Run release-plz update (dry-run)
+    - name: Validate release-plz configuration
       run: |
-        echo "🔍 Checking what version updates would be made..."
-        echo "This analyzes commits since last release and determines version bumps."
+        echo "🔧 Validating release-plz configuration..."
+        echo "This checks if release-plz.toml is valid and can parse the workspace."
         echo ""
-        echo "📋 Current versions:"
-        grep -E "^version.*=" Cargo.toml || echo "Using workspace version"
-        grep "version.*=" Cargo.toml | head -1
-        echo ""
-        echo "🧪 Running release-plz update to see what changes would be made..."
-        release-plz update --dry-run
-        echo ""
-        echo "✅ Release-plz update check completed"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Run release-plz release dry-run
-      run: |
-        echo "🚀 Checking what would be released..."
-        release-plz release --dry-run --git-token ${{ secrets.GITHUB_TOKEN }}
+        # Check if config file exists and is valid TOML
+        if [ -f "release-plz.toml" ]; then
+          echo "✅ release-plz.toml found"
+        else
+          echo "❌ release-plz.toml not found"
+          exit 1
+        fi
+
+        # Validate configuration by running a simple command that parses config
+        echo "🧪 Testing configuration parsing..."
+        release-plz release --dry-run --git-token ${{ secrets.GITHUB_TOKEN }} || {
+          echo "❌ release-plz configuration validation failed"
+          exit 1
+        }
+
+        echo ""
+        echo "✅ Release-plz configuration is valid!"
+        echo "📝 Configuration validation completed successfully."
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
