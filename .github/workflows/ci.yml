@@ -77,3 +77,27 @@ jobs:
     - uses: rustsec/audit-check@v2.0.0
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+
+  release_plz_dry_run:
+    name: Release-plz Dry Run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install release-plz
+      run: cargo install release-plz --locked
+
+    - name: Run release-plz dry-run
+      run: |
+        echo "🧪 Running release-plz dry-run to check what would be released..."
+        echo "This validates the release-plz configuration and shows what packages would be published."
+        release-plz release --dry-run
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
