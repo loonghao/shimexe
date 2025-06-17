@@ -3,7 +3,7 @@ name: Release
 # This workflow handles binary releases and distribution
 # - Triggered by tag pushes (v*) or release events
 # - Builds cross-platform binaries and uploads to GitHub releases
-# - Publishes to Chocolatey package manager
+# - Uses houseabsolute/actions-rust-release for simplified release management
 #
 # Note: Crates.io publishing is handled by release-plz.yml workflow
 
@@ -14,15 +14,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Tag name for the release'
-        required: true
-        type: string
-      upload_url:
-        description: 'Upload URL for the release'
-        required: false
-        type: string
 
 permissions:
   contents: write
@@ -33,135 +24,102 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      tag_name: ${{ steps.get_tag.outputs.tag_name }}
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Get tag name
-      id: get_tag
-      run: |
-        if [ "${{ github.event_name }}" = "release" ]; then
-          echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-        elif [ "${{ github.event_name }}" = "push" ]; then
-          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Create Release (if not exists)
-      uses: softprops/action-gh-release@v2
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-      with:
-        tag_name: ${{ steps.get_tag.outputs.tag_name }}
-        name: Release ${{ steps.get_tag.outputs.tag_name }}
-        body: |
-          Release ${{ steps.get_tag.outputs.tag_name }}
-
-          ## Changes
-          See [CHANGELOG.md](https://github.com/loonghao/shimexe/blob/main/CHANGELOG.md) for details.
-
-          ## Downloads
-          - **Windows**: shimexe-windows-x86_64.exe
-          - **Linux**: shimexe-linux-x86_64 or shimexe-linux-x86_64-musl
-          - **macOS**: shimexe-macos-x86_64 or shimexe-macos-aarch64
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-        append_body: true
-        # Don't fail if release already exists (created by release-plz)
-        fail_on_unmatched_files: false
-
-  build-and-upload:
-    name: Build and Upload
-    needs: create-release
-    runs-on: ${{ matrix.os }}
+  release:
+    name: Release - ${{ matrix.platform.os_name }}
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
+        platform:
+          - os_name: Linux-x86_64
+            os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: shimexe
-            asset_name: shimexe-linux-x86_64
-          - os: ubuntu-latest
+
+          - os_name: Linux-x86_64-musl
+            os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            artifact_name: shimexe
-            asset_name: shimexe-linux-x86_64-musl
-          - os: windows-latest
+
+          - os_name: Windows-x86_64
+            os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: shimexe.exe
-            asset_name: shimexe-windows-x86_64.exe
-          - os: macos-latest
+
+          - os_name: macOS-x86_64
+            os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: shimexe
-            asset_name: shimexe-macos-x86_64
-          - os: macos-latest
+
+          - os_name: macOS-aarch64
+            os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: shimexe
-            asset_name: shimexe-macos-aarch64
 
+    runs-on: ${{ matrix.platform.os }}
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
 
-    - name: Install musl tools
-      if: matrix.target == 'x86_64-unknown-linux-musl'
-      run: sudo apt-get install -y musl-tools
+      - name: Install musl tools
+        if: matrix.platform.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get install -y musl-tools
 
-    - name: Install ImageMagick (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        winget install ImageMagick.ImageMagick
-        $env:PATH += ";C:\Program Files\ImageMagick-7.1.1-Q16-HDRI"
-        echo "C:\Program Files\ImageMagick-7.1.1-Q16-HDRI" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install ImageMagick (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          winget install ImageMagick.ImageMagick
+          $env:PATH += ";C:\Program Files\ImageMagick-7.1.1-Q16-HDRI"
+          echo "C:\Program Files\ImageMagick-7.1.1-Q16-HDRI" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: Install ImageMagick (Linux)
-      if: runner.os == 'Linux'
-      run: sudo apt-get install -y imagemagick
+      - name: Install ImageMagick (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y imagemagick
 
-    - name: Install ImageMagick (macOS)
-      if: runner.os == 'macOS'
-      run: brew install imagemagick
+      - name: Install ImageMagick (macOS)
+        if: runner.os == 'macOS'
+        run: brew install imagemagick
 
-    - name: Build
-      run: cargo build --release --target ${{ matrix.target }} --bin shimexe
-    
-    - name: Upload Release Asset
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ needs.create-release.outputs.tag_name }}
-        files: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+      - name: Build executable
+        run: cargo build --release --target ${{ matrix.platform.target }} --bin shimexe
+
+      - name: Publish artifacts and release
+        uses: houseabsolute/actions-rust-release@v0
+        with:
+          executable-name: shimexe
+          target: ${{ matrix.platform.target }}
+          changes-file: CHANGELOG.md
+          extra-files: |
+            README.md
+            README_zh.md
+            LICENSE
 
 
 
   chocolatey:
     name: Publish to Chocolatey
-    needs: [create-release, build-and-upload]
+    needs: release
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        $version = "${{ github.ref_name }}" -replace "^v", ""
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+
     - name: Setup Chocolatey
       run: |
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
         iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-    
+
     - name: Create Chocolatey Package
       run: |
-        # Get version from tag name, removing 'v' prefix
-        $version = "${{ needs.create-release.outputs.tag_name }}" -replace "^v", ""
+        $version = "${{ steps.get_version.outputs.version }}"
         mkdir chocolatey
         cd chocolatey
-        
+
         # Create nuspec file
         @"
         <?xml version="1.0" encoding="utf-8"?>
@@ -184,18 +142,18 @@ jobs:
           </files>
         </package>
         "@ | Out-File -FilePath "shimexe.nuspec" -Encoding UTF8
-        
+
         # Create tools directory and install script
         mkdir tools
         @"
         `$ErrorActionPreference = 'Stop'
         `$packageName = 'shimexe'
-        `$url64 = 'https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-windows-x86_64.exe'
+        `$url64 = 'https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-x86_64-pc-windows-msvc.zip'
         `$checksum64 = ''
-        
+
         `$packageArgs = @{
           packageName   = `$packageName
-          fileType      = 'exe'
+          fileType      = 'zip'
           url64bit      = `$url64
           checksum64    = `$checksum64
           checksumType64= 'sha256'
@@ -204,13 +162,16 @@ jobs:
           softwareName  = 'shimexe*'
           destination   = "`$(Split-Path -parent `$MyInvocation.MyCommand.Definition)"
         }
-        
+
         Install-ChocolateyZipPackage @packageArgs
         "@ | Out-File -FilePath "tools\chocolateyinstall.ps1" -Encoding UTF8
-        
+
         choco pack
-    
+
     - name: Push to Chocolatey
+      if: env.CHOCOLATEY_API_KEY != ''
       run: |
         cd chocolatey
         choco push shimexe.*.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
+      env:
+        CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}

@@ -7,7 +7,7 @@ This document explains how to set up the release workflow for shimexe, including
 The shimexe project uses two workflows for releases:
 
 1. **release-plz.yml**: Manages version updates and creates GitHub releases
-2. **release.yml**: Builds cross-platform binaries and uploads them to releases
+2. **release.yml**: Builds cross-platform binaries using `houseabsolute/actions-rust-release`
 
 ## Required GitHub Secrets
 
@@ -77,7 +77,8 @@ This token allows publishing to the Chocolatey package manager.
    - Creates git tag
 
 5. **release.yml workflow** is triggered by the release event and:
-   - Builds binaries for all platforms
+   - Uses `houseabsolute/actions-rust-release` for simplified binary building
+   - Automatically creates archives with checksums for all platforms
    - Uploads binaries to the GitHub release
    - Publishes to Chocolatey (if configured)
 
