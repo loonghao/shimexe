@@ -3,20 +3,25 @@
 [![CI](https://github.com/loonghao/shimexe/workflows/CI/badge.svg)](https://github.com/loonghao/shimexe/actions)
 [![Crates.io](https://img.shields.io/crates/v/shimexe.svg)](https://crates.io/crates/shimexe)
 [![Documentation](https://docs.rs/shimexe/badge.svg)](https://docs.rs/shimexe)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/loonghao/shimexe#license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/loonghao/shimexe#license)
 
 [English Documentation](README.md)
 
-一个现代化的跨平台可执行文件 shim 管理器，支持环境变量扩展和 TOML 配置。
+一个现代化的跨平台可执行文件 shim 管理器，支持 HTTP URL 下载、动态模板系统和增强的参数处理功能。
 
 ## 特性
 
 - 🚀 **跨平台**: 支持 Windows、macOS 和 Linux
+- 🌐 **HTTP URL 支持**: 直接从 URL 下载可执行文件
 - 📝 **TOML 配置**: 人类可读的配置文件格式
 - 🔧 **环境变量扩展**: 支持 `${VAR:default}` 语法
 - 🎯 **单一二进制**: 所有功能集成在一个可执行文件中
 - 📦 **包管理器支持**: 可通过 crates.io 和 Chocolatey 安装
 - 🔗 **API 库**: 可作为 crate 在您的项目中使用
+- 🎨 **自定义图标**: 在可执行文件中嵌入美观的 SVG 图标
+- 🤖 **智能名称推断**: 自动从 URL 推断应用程序名称
+- ⚡ **自动下载**: 运行时自动下载缺失的可执行文件
+- 🔒 **安全下载**: 使用 rustls-tls 进行安全的 HTTPS 连接
 
 ## 安装
 
@@ -65,24 +70,16 @@ $env:SHIMEXE_VERSION="0.3.0"; irm https://raw.githubusercontent.com/loonghao/shi
 
 ## 快速开始
 
+### 传统本地可执行文件
+
 1. 初始化 shimexe:
    ```bash
    shimexe init --examples
    ```
 
-2. 添加新的 shim:
+2. 添加本地可执行文件 shim:
    ```bash
    shimexe add rust --path "${RUST_HOME:~/.cargo/bin}/rustc${EXE_EXT:.exe}" --args "--version"
-   ```
-
-3. 列出所有 shim:
-   ```bash
-   shimexe list --detailed
-   ```
-
-4. 运行您的 shim:
-   ```bash
-   rust
    ```
 
 ### HTTP URL 下载
@@ -113,7 +110,12 @@ shimexe 现在支持下载和解压压缩包（zip 文件），并自动发现�
    # 解压压缩包并为找到的所有 .exe 文件创建 shim
    ```
 
-3. 运行你的 shim（如果缺失会自动下载和解压）：
+3. 列出所有 shim:
+   ```bash
+   shimexe list --detailed
+   ```
+
+4. 运行你的 shim（如果缺失会自动下载和解压）：
    ```bash
    plz --help
    ```
@@ -121,6 +123,8 @@ shimexe 现在支持下载和解压压缩包（zip 文件），并自动发现�
 ## 配置格式
 
 Shim 使用 TOML 文件配置，文件扩展名为 `.shim.toml`:
+
+### 本地可执行文件配置
 
 ```toml
 [shim]
@@ -139,6 +143,56 @@ version = "1.0.0"
 author = "您的名字"
 tags = ["rust", "compiler"]
 ```
+
+### HTTP URL 配置
+
+```toml
+[shim]
+name = "installer-analyzer"
+path = "/home/user/.shimexe/installer-analyzer/bin/installer-analyzer.exe"
+download_url = "https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe"
+source_type = "url"
+args = []
+cwd = ""
+
+[env]
+# 可选的环境变量
+
+[metadata]
+description = "来自 GitHub 的安装程序分析工具"
+version = "0.7.0"
+author = "loonghao"
+tags = ["installer", "analyzer", "tool"]
+```
+
+### 压缩包配置（新功能！）
+
+```toml
+[shim]
+name = "release-plz"
+path = "/home/user/.shimexe/release-plz/bin/release-plz.exe"
+download_url = "https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip"
+source_type = "archive"
+args = []
+
+# 从压缩包中提取的可执行文件列表
+[[shim.extracted_executables]]
+name = "release-plz"
+path = "release-plz.exe"
+full_path = "/home/user/.shimexe/release-plz/bin/release-plz.exe"
+is_primary = true
+
+[env]
+# 可选的环境变量
+
+[metadata]
+description = "来自压缩包的 Release Please 工具"
+version = "0.3.135"
+author = "release-plz team"
+tags = ["release", "automation", "tool"]
+```
+
+**注意**: 当使用 HTTP URL 或压缩包时，shimexe 会自动下载并解压到 `~/.shimexe/<app>/bin/` 目录，并更新路径指向本地文件。
 
 ## 环境变量扩展
 
@@ -210,6 +264,32 @@ shimexe validate <shim-file>
 shimexe init [--examples]
 ```
 
+### HTTP URL 和压缩包示例
+
+```bash
+# 下载具有明确名称的可执行文件
+shimexe add mytool --path https://github.com/user/repo/releases/download/v1.0/tool.exe
+
+# 从 URL 自动推断名称（创建 'installer-analyzer' shim）
+shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+
+# 下载并解压 zip 压缩包（为找到的所有可执行文件创建 shim）
+shimexe add plz --path https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip
+
+# 添加参数和环境变量
+shimexe add analyzer --path https://example.com/tools/analyzer.exe --args "--verbose" --env "DEBUG=1"
+
+# 强制覆盖现有 shim
+shimexe add mytool --path https://example.com/new-tool.exe --force
+
+# 下载到自定义 shim 目录
+shimexe add --shim-dir ./my-tools --path https://example.com/tool.exe
+
+# 包含多个可执行文件的压缩包（自动检测并创建多个 shim）
+shimexe add devtools --path https://example.com/development-tools.zip
+# 这可能会创建：devtools-compiler、devtools-debugger、devtools-profiler shim
+```
+
 ## 作为库使用
 
 在您的 `Cargo.toml` 中添加:
@@ -243,6 +323,42 @@ let config = ShimConfig {
 config.to_file("my-tool.shim.toml")?;
 ```
 
+### HTTP URL 下载示例
+
+```rust
+use shimexe_core::{Downloader, ShimConfig, ShimCore};
+
+// 程序化下载并创建 shim
+let downloader = Downloader::new();
+let url = "https://github.com/user/repo/releases/download/v1.0/tool.exe";
+
+// 从 URL 推断应用名称
+let app_name = Downloader::infer_app_name_from_url(url).unwrap();
+let filename = Downloader::extract_filename_from_url(url).unwrap();
+
+// 生成下载路径
+let download_path = Downloader::generate_download_path(
+    &std::path::Path::new("~/.shimexe"),
+    &app_name,
+    &filename
+);
+
+// 下载文件
+downloader.download_file(url, &download_path).await?;
+
+// 创建 shim 配置
+let config = ShimConfig {
+    shim: ShimCore {
+        name: app_name,
+        path: download_path.to_string_lossy().to_string(),
+        args: vec![],
+        cwd: None,
+    },
+    env: HashMap::new(),
+    metadata: Default::default(),
+};
+```
+
 ## 集成示例
 
 ### 与 vx 集成
@@ -274,18 +390,30 @@ let config = ShimConfig {
 };
 ```
 
+## 构建图标
+
+shimexe 包含一个美观的自定义图标，会嵌入到 Windows 可执行文件中。构建过程自动处理图标生成：
+
+1. **自动生成**：如果您安装了 ImageMagick，构建脚本会自动将 `assets/icon.svg` 转换为 `assets/icon.ico`
+2. **手动生成**：您也可以手动生成图标：
+   ```bash
+   # 首先安装 ImageMagick
+   winget install ImageMagick.ImageMagick
+
+   # 生成图标
+   magick convert -background transparent -define icon:auto-resize=256,128,64,48,32,16 assets/icon.svg assets/icon.ico
+   ```
+3. **CI/CD**：GitHub Actions 自动安装 ImageMagick 并为所有发布构建生成图标
+
+该图标代表了 shimexe 的核心概念：一个中央枢纽（shim 管理器）连接到多个可执行文件，带有动画数据流指示器，显示工具的动态特性。
+
 ## 贡献
 
 欢迎贡献！请随时提交 Pull Request。
 
 ## 许可证
 
-本项目采用以下许可证之一:
-
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) 或 http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) 或 http://opensource.org/licenses/MIT)
-
-您可以选择其中任何一个。
+本项目采用 MIT 许可证 - 详情请参阅 [LICENSE-MIT](LICENSE-MIT) 文件。
 
 ## 致谢
 
