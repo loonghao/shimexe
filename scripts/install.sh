@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shimexe installer script for Unix-like systems (macOS, Linux)
-# Usage: curl -LsSf https://github.com/loonghao/shimexe/install.sh | sh
-# Usage with version: curl -LsSf https://github.com/loonghao/shimexe/0.1.3/install.sh | sh
+# Usage: curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
+# Usage with version: SHIMEXE_VERSION="0.3.0" curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
 
 set -euo pipefail
 

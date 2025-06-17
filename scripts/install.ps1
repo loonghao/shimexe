@@ -1,6 +1,6 @@
 # shimexe installer script for Windows
-# Usage: powershell -c "irm https://github.com/loonghao/shimexe/install.ps1 | iex"
-# Usage with version: $env:SHIMEXE_VERSION="0.1.3"; powershell -c "irm https://github.com/loonghao/shimexe/install.ps1 | iex"
+# Usage: powershell -c "irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex"
+# Usage with version: $env:SHIMEXE_VERSION="0.3.0"; powershell -c "irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex"
 
 param(
     [string]$Version = $env:SHIMEXE_VERSION,
