@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.1](https://github.com/loonghao/shimexe/compare/v0.3.0...v0.3.1) - 2025-06-17
+
+### Fixed
+
+- correct release tag format in install scripts
+- update README_zh.md and fix install script file naming
+- correct install script URLs to use raw.githubusercontent.com
+- resolve duplicate release issues and improve Chocolatey publishing
+
+### Other
+
+- update chocolatey-action to latest version v3.3.0
+
 ## [0.3.0](https://github.com/loonghao/shimexe/compare/v0.2.1...v0.3.0) - 2025-06-17
 
 ### Added
