@@ -211,14 +211,14 @@ jobs:
 
         Write-Host "Updated Chocolatey package with checksum: $checksum64"
 
-    - name: Pack and Push to Chocolatey
-      uses: crazy-max/ghaction-chocolatey@v3
+    - name: Pack Chocolatey Package
+      uses: crazy-max/ghaction-chocolatey@v3.3.0
       with:
         args: pack chocolatey/shimexe.nuspec
 
     - name: Push to Chocolatey
       if: ${{ env.CHOCOLATEY_API_KEY != '' }}
-      uses: crazy-max/ghaction-chocolatey@v3
+      uses: crazy-max/ghaction-chocolatey@v3.3.0
       with:
         args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ env.CHOCOLATEY_API_KEY }}
       env:
