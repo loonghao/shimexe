@@ -1,6 +1,23 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/shimexe-core"]
 resolver = "2"
+
+[package]
+name = "shimexe"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "A modern, cross-platform executable shim manager with environment variable expansion and TOML configuration support"
+
+[[bin]]
+name = "shimexe"
+path = "src/main.rs"
 
 [workspace.package]
 version = "0.1.2"
@@ -47,6 +64,23 @@ async-trait = "0.1"
 
 # Testing
 tempfile = "3.8"
+
+[dependencies]
+shimexe-core = { version = "0.1.2", path = "crates/shimexe-core" }
+clap.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dirs.workspace = true
+serde.workspace = true
+toml.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[build-dependencies]
+winres = "0.1"
 
 [profile.release]
 opt-level = 3

@@ -4,8 +4,8 @@ use std::process::Command;
 
 fn main() {
     // Generate icon if SVG exists and ICO doesn't exist
-    let svg_path = Path::new("../../assets/icon.svg");
-    let ico_path = Path::new("../../assets/icon.ico");
+    let svg_path = Path::new("assets/icon.svg");
+    let ico_path = Path::new("assets/icon.ico");
 
     if svg_path.exists() && !ico_path.exists() {
         println!("cargo:warning=SVG icon found but ICO missing. Attempting to generate ICO...");
@@ -45,8 +45,8 @@ fn main() {
     }
 
     // Tell Cargo to rerun this build script if the icon changes
-    println!("cargo:rerun-if-changed=../../assets/icon.ico");
-    println!("cargo:rerun-if-changed=../../assets/icon.svg");
+    println!("cargo:rerun-if-changed=assets/icon.ico");
+    println!("cargo:rerun-if-changed=assets/icon.svg");
 }
 
 fn generate_icon_from_svg() {
@@ -58,8 +58,8 @@ fn generate_icon_from_svg() {
             "transparent",
             "-define",
             "icon:auto-resize=256,128,64,48,32,16",
-            "../../assets/icon.svg",
-            "../../assets/icon.ico",
+            "assets/icon.svg",
+            "assets/icon.ico",
         ])
         .output();
 
