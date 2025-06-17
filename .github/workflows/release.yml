@@ -52,7 +52,7 @@ jobs:
           echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
         fi
 
-    - name: Create Release
+    - name: Create Release (if not exists)
       uses: softprops/action-gh-release@v2
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
       with:
@@ -72,6 +72,8 @@ jobs:
         prerelease: false
         generate_release_notes: true
         append_body: true
+        # Don't fail if release already exists (created by release-plz)
+        fail_on_unmatched_files: false
 
   build-and-upload:
     name: Build and Upload
