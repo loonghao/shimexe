@@ -146,6 +146,45 @@ jobs:
           echo "Committed and pushed package updates"
         }
 
+    - name: Publish to Chocolatey
+      if: github.event_name == 'release'
+      run: |
+        $version = "${{ steps.get_version.outputs.version }}"
+        $zipUrl = "${{ steps.get_hashes.outputs.zip_url }}"
+        $zipHash = "${{ steps.get_hashes.outputs.zip_hash }}"
+
+        # Copy package files to working directory
+        Copy-Item -Path "pkg/choco" -Destination "chocolatey" -Recurse
+
+        # Update version in nuspec
+        $nuspecPath = "chocolatey/shimexe.nuspec"
+        $nuspecContent = Get-Content $nuspecPath -Raw
+        $nuspecContent = $nuspecContent -replace '<version>[\d\.]+</version>', "<version>$version</version>"
+        Set-Content -Path $nuspecPath -Value $nuspecContent -Encoding UTF8
+
+        # Update install script
+        $installScriptPath = "chocolatey/tools/chocolateyinstall.ps1"
+        $installScript = Get-Content $installScriptPath -Raw
+        $installScript = $installScript -replace "url64 = 'https://github\.com/[^']+/releases/download/v[\d\.]+/[^']+\.zip'", "url64 = '$zipUrl'"
+        $installScript = $installScript -replace "checksum64 = '[^']*'", "checksum64 = '$zipHash'"
+        Set-Content -Path $installScriptPath -Value $installScript -Encoding UTF8
+
+        echo "Prepared Chocolatey package for version $version"
+
+    - name: Pack Chocolatey Package
+      if: github.event_name == 'release'
+      uses: crazy-max/ghaction-chocolatey@v3.3.0
+      with:
+        args: pack chocolatey/shimexe.nuspec
+
+    - name: Push to Chocolatey
+      if: github.event_name == 'release' && env.CHOCOLATEY_API_KEY != ''
+      uses: crazy-max/ghaction-chocolatey@v3.3.0
+      with:
+        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ env.CHOCOLATEY_API_KEY }}
+      env:
+        CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
     - name: Create Scoop PR (if needed)
       if: github.event_name == 'release'
       run: |
