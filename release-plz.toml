@@ -5,8 +5,7 @@ changelog_update = true
 git_release_enable = true
 # Enable automatic tag creation
 git_tag_enable = true
-# Use standard tag format v{{version}} to trigger release.yml workflow
-git_tag_name = "v{{version}}"
+# Don't set workspace-level git_tag_name to avoid conflicts with package-level settings
 
 
 # Changelog configuration
@@ -24,12 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Package-specific configuration
 [[package]]
 name = "shimexe-core"
+path = "crates/shimexe-core"
 changelog_update = true
 # Custom tag format for shimexe-core (library releases)
 git_tag_name = "shimexe-core-v{{version}}"
 
 [[package]]
 name = "shimexe"
+# Main CLI package is now in the root directory (no path needed)
 changelog_update = true
 # Standard tag format for main CLI (triggers release.yml workflow)
 git_tag_name = "v{{version}}"
