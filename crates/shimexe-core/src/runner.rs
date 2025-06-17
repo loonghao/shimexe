@@ -3,6 +3,7 @@ use std::process::{Command, Stdio};
 use tracing::{debug, info, warn};
 
 use crate::config::ShimConfig;
+use crate::downloader::Downloader;
 use crate::error::{Result, ShimError};
 use crate::updater::ShimUpdater;
 use crate::utils::merge_env_vars;
@@ -42,6 +43,9 @@ impl ShimRunner {
                 self.check_and_update(auto_update, shim_file_path)?;
             }
         }
+
+        // Check if we need to download the executable
+        self.ensure_executable_available()?;
 
         let executable_path = self.config.get_executable_path()?;
 
@@ -170,6 +174,77 @@ impl ShimRunner {
             }
         });
 
+        Ok(())
+    }
+
+    /// Ensure the executable is available, downloading if necessary
+    fn ensure_executable_available(&self) -> Result<()> {
+        // Check if the path is a URL
+        if Downloader::is_url(&self.config.shim.path) {
+            // For HTTP URLs, we need to check if the local file exists
+            // and download it if it doesn't
+            let executable_path = match self.config.get_executable_path() {
+                Ok(path) => path,
+                Err(_) => {
+                    // If get_executable_path fails for a URL, it means we need to download
+                    return self.download_executable();
+                }
+            };
+
+            // Check if the file exists
+            if !executable_path.exists() {
+                return self.download_executable();
+            }
+        }
+        Ok(())
+    }
+
+    /// Download the executable from HTTP URL
+    fn download_executable(&self) -> Result<()> {
+        let url = &self.config.shim.path;
+
+        // Extract filename from URL
+        let filename = Downloader::extract_filename_from_url(url).ok_or_else(|| {
+            ShimError::Config(format!("Could not extract filename from URL: {}", url))
+        })?;
+
+        // Determine download directory
+        let download_dir = if let Some(ref shim_file_path) = self.shim_file_path {
+            // Use the same directory as the shim file
+            shim_file_path
+                .parent()
+                .ok_or_else(|| {
+                    ShimError::Config("Could not determine shim file directory".to_string())
+                })?
+                .join(&self.config.shim.name)
+                .join("bin")
+        } else {
+            // Fallback to home directory
+            dirs::home_dir()
+                .ok_or_else(|| ShimError::Config("Could not determine home directory".to_string()))?
+                .join(".shimexe")
+                .join(&self.config.shim.name)
+                .join("bin")
+        };
+
+        let download_path = download_dir.join(&filename);
+
+        // Create a runtime for async operations
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            ShimError::ProcessExecution(format!("Failed to create async runtime: {}", e))
+        })?;
+
+        rt.block_on(async {
+            let downloader = Downloader::new();
+            downloader
+                .download_if_missing(url, &download_path)
+                .await
+                .map_err(|e| {
+                    ShimError::ProcessExecution(format!("Failed to download executable: {}", e))
+                })
+        })?;
+
+        info!("Downloaded executable to: {}", download_path.display());
         Ok(())
     }
 }

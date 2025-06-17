@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use std::env;
 use std::path::PathBuf;
-use tracing::{info, warn};
 
 mod commands;
 mod shim_manager;
@@ -49,7 +48,8 @@ enum Commands {
     AutoUpdate(AutoUpdateCommand),
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     // Determine if we're running as a shim BEFORE parsing CLI args
     let current_exe = env::current_exe()?;
     let exe_name = current_exe
@@ -59,12 +59,11 @@ fn main() -> Result<()> {
 
     // If the executable name is not "shimexe", we're likely running as a shim
     if exe_name != "shimexe" {
-        // Initialize basic logging for shim mode
+        // Initialize minimal logging for shim mode (only errors by default)
         tracing_subscriber::fmt()
-            .with_env_filter("shimexe=info")
+            .with_env_filter("shimexe=error")
             .init();
 
-        info!("Running as shim: {}", exe_name);
         return run_as_shim(exe_name, &env::args().collect::<Vec<_>>()[1..]);
     }
 
@@ -72,14 +71,14 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
-    let log_level = if cli.verbose { "debug" } else { "info" };
+    let log_level = if cli.verbose { "debug" } else { "warn" };
     tracing_subscriber::fmt()
         .with_env_filter(format!("shimexe={}", log_level))
         .init();
 
     // Run as main CLI
     match cli.command {
-        Some(Commands::Add(cmd)) => cmd.execute(cli.shim_dir),
+        Some(Commands::Add(cmd)) => cmd.execute(cli.shim_dir).await,
         Some(Commands::Remove(cmd)) => cmd.execute(cli.shim_dir),
         Some(Commands::List(cmd)) => cmd.execute(cli.shim_dir),
         Some(Commands::Update(cmd)) => cmd.execute(cli.shim_dir),
@@ -107,7 +106,6 @@ fn run_as_shim(shim_name: &str, args: &[String]) -> Result<()> {
     let local_shim_file = exe_dir.join(format!("{}.shim.toml", shim_name));
 
     let shim_file = if local_shim_file.exists() {
-        info!("Found local shim file: {}", local_shim_file.display());
         local_shim_file
     } else {
         // Fallback to the default shim directory
@@ -115,14 +113,6 @@ fn run_as_shim(shim_name: &str, args: &[String]) -> Result<()> {
         let default_shim_file = shim_dir.join(format!("{}.shim.toml", shim_name));
 
         if !default_shim_file.exists() {
-            warn!(
-                "Shim file not found in local directory: {}",
-                local_shim_file.display()
-            );
-            warn!(
-                "Shim file not found in default directory: {}",
-                default_shim_file.display()
-            );
             return Err(anyhow::anyhow!(
                 "Shim '{}' not found. Searched in:\n  - {}\n  - {}",
                 shim_name,
@@ -131,7 +121,6 @@ fn run_as_shim(shim_name: &str, args: &[String]) -> Result<()> {
             ));
         }
 
-        info!("Found default shim file: {}", default_shim_file.display());
         default_shim_file
     };
 
@@ -153,7 +142,6 @@ fn get_shim_directory(custom_dir: Option<PathBuf>) -> Result<PathBuf> {
 
     if !shim_dir.exists() {
         std::fs::create_dir_all(&shim_dir)?;
-        info!("Created shim directory: {}", shim_dir.display());
     }
 
     Ok(shim_dir)

@@ -1,18 +1,18 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Args;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::shim_manager::ShimManager;
-use shimexe_core::{ShimConfig, ShimCore, ShimMetadata};
+use shimexe_core::{Downloader, ShimConfig, ShimCore, ShimMetadata};
 
 #[derive(Args)]
 pub struct AddCommand {
-    /// Name of the shim
-    pub name: String,
+    /// Name of the shim (optional, will be inferred from path/URL if not provided)
+    pub name: Option<String>,
 
-    /// Path to the target executable
+    /// Path to the target executable or HTTP URL to download
     #[arg(short, long)]
     pub path: String,
 
@@ -46,16 +46,19 @@ pub struct AddCommand {
 }
 
 impl AddCommand {
-    pub fn execute(&self, global_shim_dir: Option<PathBuf>) -> Result<()> {
+    pub async fn execute(&self, global_shim_dir: Option<PathBuf>) -> Result<()> {
         // Use command-specific shim_dir if provided, otherwise use global setting
         let shim_dir = self.shim_dir.clone().or(global_shim_dir);
-        let manager = ShimManager::new(shim_dir)?;
+        let manager = ShimManager::new(shim_dir.clone())?;
+
+        // Determine the actual name and path
+        let (shim_name, actual_path) = self.resolve_name_and_path(&shim_dir).await?;
 
         // Check if shim already exists
-        if manager.shim_exists(&self.name) && !self.force {
+        if manager.shim_exists(&shim_name) && !self.force {
             return Err(anyhow::anyhow!(
                 "Shim '{}' already exists. Use --force to overwrite.",
-                self.name
+                shim_name
             ));
         }
 
@@ -75,8 +78,8 @@ impl AddCommand {
         // Create shim configuration
         let config = ShimConfig {
             shim: ShimCore {
-                name: self.name.clone(),
-                path: self.path.clone(),
+                name: shim_name.clone(),
+                path: actual_path.clone(),
                 args: self.args.clone(),
                 cwd: self.cwd.clone(),
             },
@@ -95,10 +98,10 @@ impl AddCommand {
         config.validate()?;
 
         // Add the shim
-        manager.add_shim(&self.name, &config)?;
+        manager.add_shim(&shim_name, &config)?;
 
-        info!("Successfully added shim '{}'", self.name);
-        println!("✓ Added shim '{}' -> {}", self.name, self.path);
+        info!("Successfully added shim '{}'", shim_name);
+        println!("✓ Added shim '{}' -> {}", shim_name, actual_path);
 
         // Add to system PATH if requested
         if self.add_system_path {
@@ -110,5 +113,71 @@ impl AddCommand {
         }
 
         Ok(())
+    }
+
+    /// Resolve the shim name and actual path, handling HTTP URLs and name inference
+    async fn resolve_name_and_path(&self, shim_dir: &Option<PathBuf>) -> Result<(String, String)> {
+        let is_url = Downloader::is_url(&self.path);
+
+        if is_url {
+            // Handle HTTP URL
+            let shim_name = if let Some(ref name) = self.name {
+                name.clone()
+            } else {
+                // Infer name from URL
+                Downloader::infer_app_name_from_url(&self.path).ok_or_else(|| {
+                    anyhow::anyhow!("Could not infer application name from URL: {}", self.path)
+                })?
+            };
+
+            // Extract filename from URL
+            let filename = Downloader::extract_filename_from_url(&self.path).ok_or_else(|| {
+                anyhow::anyhow!("Could not extract filename from URL: {}", self.path)
+            })?;
+
+            // Determine base directory for downloads
+            let base_dir = if let Some(ref dir) = shim_dir {
+                dir.clone()
+            } else {
+                dirs::home_dir()
+                    .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
+                    .join(".shimexe")
+            };
+
+            // Generate download path
+            let download_path =
+                Downloader::generate_download_path(&base_dir, &shim_name, &filename);
+
+            // Download the file if it doesn't exist
+            let downloader = Downloader::new();
+            let downloaded = downloader
+                .download_if_missing(&self.path, &download_path)
+                .await
+                .with_context(|| format!("Failed to download file from {}", self.path))?;
+
+            if downloaded {
+                info!("Downloaded {} to {}", self.path, download_path.display());
+            } else {
+                debug!("File already exists at {}", download_path.display());
+            }
+
+            Ok((shim_name, download_path.to_string_lossy().to_string()))
+        } else {
+            // Handle local path
+            let shim_name = if let Some(ref name) = self.name {
+                name.clone()
+            } else {
+                // Infer name from local path
+                PathBuf::from(&self.path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Could not infer application name from path: {}", self.path)
+                    })?
+            };
+
+            Ok((shim_name, self.path.clone()))
+        }
     }
 }

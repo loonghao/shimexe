@@ -201,13 +201,47 @@ impl ShimConfig {
     /// Get the resolved executable path
     pub fn get_executable_path(&self) -> Result<PathBuf> {
         let expanded_path = expand_env_vars(&self.shim.path)?;
-        let path = PathBuf::from(expanded_path);
 
-        if path.is_absolute() {
-            Ok(path)
+        // Check if it's a URL
+        if crate::downloader::Downloader::is_url(&expanded_path) {
+            // For URLs, we need to determine where the downloaded file would be
+            let filename = crate::downloader::Downloader::extract_filename_from_url(&expanded_path)
+                .ok_or_else(|| {
+                    ShimError::Config(format!(
+                        "Could not extract filename from URL: {}",
+                        expanded_path
+                    ))
+                })?;
+
+            // Try to find the downloaded file in the expected location
+            // First try relative to home directory
+            if let Some(home_dir) = dirs::home_dir() {
+                let download_path = home_dir
+                    .join(".shimexe")
+                    .join(&self.shim.name)
+                    .join("bin")
+                    .join(&filename);
+
+                if download_path.exists() {
+                    return Ok(download_path);
+                }
+            }
+
+            // If not found, return an error indicating download is needed
+            Err(ShimError::ExecutableNotFound(format!(
+                "Executable not found for URL: {}. Download may be required.",
+                expanded_path
+            )))
         } else {
-            // Try to find in PATH
-            which::which(&path).map_err(|_| ShimError::ExecutableNotFound(self.shim.path.clone()))
+            let path = PathBuf::from(expanded_path);
+
+            if path.is_absolute() {
+                Ok(path)
+            } else {
+                // Try to find in PATH
+                which::which(&path)
+                    .map_err(|_| ShimError::ExecutableNotFound(self.shim.path.clone()))
+            }
         }
     }
 }
