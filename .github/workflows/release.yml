@@ -37,48 +37,57 @@ jobs:
     name: Get Release Info
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.get_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
+      upload_url: ${{ steps.get_release.outputs.upload_url }}
       tag_name: ${{ steps.get_release.outputs.tag_name }}
-      create_release: ${{ steps.get_release.outputs.create_release }}
+      release_id: ${{ steps.get_release.outputs.release_id }}
     steps:
+    - uses: actions/checkout@v4
+
     - name: Get Release Info
       id: get_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         if [ "${{ github.event_name }}" = "release" ]; then
           echo "upload_url=${{ github.event.release.upload_url }}" >> $GITHUB_OUTPUT
           echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          echo "release_id=${{ github.event.release.id }}" >> $GITHUB_OUTPUT
         elif [ "${{ github.event_name }}" = "push" ]; then
           # Extract tag name from ref (refs/tags/v1.0.0 -> v1.0.0)
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          # For tag pushes, we need to create a release first
-          echo "create_release=true" >> $GITHUB_OUTPUT
+
+          # Check if release already exists
+          RELEASE_INFO=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME 2>/dev/null || echo "null")
+
+          if [ "$RELEASE_INFO" = "null" ]; then
+            # Create new release
+            echo "Creating new release for tag $TAG_NAME"
+            RELEASE_BODY="Release $TAG_NAME\n\n## Changes\nSee [CHANGELOG.md](https://github.com/loonghao/shimexe/blob/main/CHANGELOG.md) for details.\n\n## Downloads\n- **Windows**: shimexe-windows-x86_64.exe\n- **Linux**: shimexe-linux-x86_64 or shimexe-linux-x86_64-musl\n- **macOS**: shimexe-macos-x86_64 or shimexe-macos-aarch64"
+
+            RELEASE_RESPONSE=$(gh api repos/${{ github.repository }}/releases \
+              --method POST \
+              --field tag_name="$TAG_NAME" \
+              --field name="Release $TAG_NAME" \
+              --field body="$RELEASE_BODY" \
+              --field draft=false \
+              --field prerelease=false)
+
+            UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | jq -r '.upload_url')
+            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+          else
+            # Use existing release
+            echo "Using existing release for tag $TAG_NAME"
+            UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.upload_url')
+            RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.id')
+          fi
+
+          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
         elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "upload_url=${{ inputs.upload_url }}" >> $GITHUB_OUTPUT
           echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
         fi
-
-    - name: Create Release
-      id: create_release
-      if: steps.get_release.outputs.create_release == 'true'
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.get_release.outputs.tag_name }}
-        release_name: Release ${{ steps.get_release.outputs.tag_name }}
-        draft: false
-        prerelease: false
-        body: |
-          Release ${{ steps.get_release.outputs.tag_name }}
-
-          ## Changes
-          See [CHANGELOG.md](https://github.com/loonghao/shimexe/blob/main/CHANGELOG.md) for details.
-
-          ## Downloads
-          - **Windows**: shimexe-windows-x86_64.exe
-          - **Linux**: shimexe-linux-x86_64 or shimexe-linux-x86_64-musl
-          - **macOS**: shimexe-macos-x86_64 or shimexe-macos-aarch64
 
   build-and-upload:
     name: Build and Upload
@@ -139,20 +148,18 @@ jobs:
       run: cargo build --release --target ${{ matrix.target }} --bin shimexe
     
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.get-release-info.outputs.upload_url }}
-        asset_path: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
-        asset_name: ${{ matrix.asset_name }}
-        asset_content_type: application/octet-stream
+      run: |
+        gh release upload ${{ needs.get-release-info.outputs.tag_name }} \
+          ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}#${{ matrix.asset_name }} \
+          --clobber
 
 
 
   chocolatey:
     name: Publish to Chocolatey
-    needs: build-and-upload
+    needs: [get-release-info, build-and-upload]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     steps:
