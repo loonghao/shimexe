@@ -68,8 +68,18 @@ impl Downloader {
         base_dir.join(app_name).join("bin").join(filename)
     }
 
-    /// Download a file from URL to the specified path
+    /// Download a file from URL to the specified path with resume support
     pub async fn download_file(&self, url: &str, target_path: &Path) -> Result<()> {
+        self.download_file_with_resume(url, target_path, true).await
+    }
+
+    /// Download a file from URL to the specified path with optional resume support
+    pub async fn download_file_with_resume(
+        &self,
+        url: &str,
+        target_path: &Path,
+        allow_resume: bool,
+    ) -> Result<()> {
         info!("Downloading {} to {}", url, target_path.display());
 
         // Create parent directories if they don't exist
@@ -78,36 +88,63 @@ impl Downloader {
                 .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
         }
 
-        // Send HTTP request
-        let response = self
-            .client
-            .get(url)
+        // Check for existing partial download
+        let mut start_pos = 0u64;
+        if allow_resume && target_path.exists() {
+            start_pos = fs::metadata(target_path)?.len();
+            if start_pos > 0 {
+                info!("Resuming download from byte {}", start_pos);
+            }
+        }
+
+        // Build HTTP request with range header for resume
+        let mut request = self.client.get(url);
+        if start_pos > 0 {
+            request = request.header("Range", format!("bytes={}-", start_pos));
+        }
+
+        let response = request
             .send()
             .await
             .with_context(|| format!("Failed to send request to {}", url))?;
 
         // Check if request was successful
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() && status != reqwest::StatusCode::PARTIAL_CONTENT {
             return Err(anyhow::anyhow!(
                 "HTTP request failed with status: {}",
-                response.status()
+                status
             ));
         }
 
         // Get content length for progress tracking
-        let total_size = response.content_length();
-        if let Some(size) = total_size {
-            info!("Download size: {} bytes", size);
+        let content_length = response.content_length().unwrap_or(0);
+        let total_size = if start_pos > 0 && status == reqwest::StatusCode::PARTIAL_CONTENT {
+            start_pos + content_length
+        } else {
+            content_length
+        };
+
+        if total_size > 0 {
+            info!("Download size: {} bytes", total_size);
         }
 
-        // Create the target file
-        let mut file = tokio::fs::File::create(target_path)
-            .await
-            .with_context(|| format!("Failed to create file: {}", target_path.display()))?;
+        // Open file for writing (append if resuming)
+        let mut file = if start_pos > 0 {
+            tokio::fs::OpenOptions::new()
+                .append(true)
+                .open(target_path)
+                .await
+        } else {
+            tokio::fs::File::create(target_path).await
+        }
+        .with_context(|| format!("Failed to open file: {}", target_path.display()))?;
 
-        // Download and write file content
-        let mut downloaded = 0u64;
+        // Download and write file content with optimized buffering
+        let mut downloaded = start_pos;
         let mut stream = response.bytes_stream();
+        let mut last_progress_report = std::time::Instant::now();
+        let progress_interval = std::time::Duration::from_millis(500); // Report every 500ms
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.with_context(|| "Failed to read chunk from response")?;
@@ -118,15 +155,15 @@ impl Downloader {
 
             downloaded += chunk.len() as u64;
 
-            // Log progress for large files
-            if let Some(total) = total_size {
-                if total > 1024 * 1024 {
-                    // Only show progress for files > 1MB
-                    let progress = (downloaded as f64 / total as f64) * 100.0;
-                    if downloaded % (total / 10).max(1) == 0 {
-                        debug!("Download progress: {:.1}%", progress);
-                    }
-                }
+            // Optimized progress reporting - only report every 500ms for large files
+            if total_size > 1024 * 1024 && last_progress_report.elapsed() >= progress_interval {
+                let progress = if total_size > 0 {
+                    (downloaded as f64 / total_size as f64) * 100.0
+                } else {
+                    0.0
+                };
+                debug!("Download progress: {:.1}% ({} bytes)", progress, downloaded);
+                last_progress_report = std::time::Instant::now();
             }
         }
 
@@ -154,15 +191,76 @@ impl Downloader {
         path.exists() && path.is_file()
     }
 
-    /// Download file if it doesn't exist
+    /// Download file if it doesn't exist or is incomplete
     pub async fn download_if_missing(&self, url: &str, target_path: &Path) -> Result<bool> {
         if Self::file_exists(target_path) {
-            debug!("File already exists: {}", target_path.display());
-            return Ok(false);
+            // Check if file is complete by attempting a HEAD request
+            if let Ok(expected_size) = self.get_remote_file_size(url).await {
+                if let Ok(local_size) = fs::metadata(target_path).map(|m| m.len()) {
+                    if local_size == expected_size {
+                        debug!(
+                            "File already exists and is complete: {}",
+                            target_path.display()
+                        );
+                        return Ok(false);
+                    } else {
+                        debug!(
+                            "File exists but incomplete: {} bytes, expected {} bytes",
+                            local_size, expected_size
+                        );
+                    }
+                }
+            }
         }
 
         self.download_file(url, target_path).await?;
         Ok(true)
+    }
+
+    /// Get the size of a remote file using HEAD request
+    pub async fn get_remote_file_size(&self, url: &str) -> Result<u64> {
+        let response = self
+            .client
+            .head(url)
+            .send()
+            .await
+            .with_context(|| format!("Failed to send HEAD request to {}", url))?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "HEAD request failed with status: {}",
+                response.status()
+            ));
+        }
+
+        response
+            .content_length()
+            .ok_or_else(|| anyhow::anyhow!("Server did not provide content length"))
+    }
+
+    /// Download multiple files concurrently with limited parallelism
+    pub async fn download_files_concurrent(
+        &self,
+        downloads: Vec<(String, PathBuf)>, // (url, target_path) pairs
+        max_concurrent: usize,
+    ) -> Result<Vec<Result<()>>> {
+        use futures_util::stream::{self, StreamExt};
+
+        let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(max_concurrent));
+        let results = stream::iter(downloads)
+            .map(|(url, target_path)| {
+                let client = &self;
+                let semaphore = semaphore.clone();
+                async move {
+                    let _permit = semaphore.acquire().await.unwrap();
+                    client.download_file(&url, &target_path).await
+                }
+            })
+            .buffer_unordered(max_concurrent)
+            .collect::<Vec<_>>()
+            .await;
+
+        Ok(results)
     }
 }
 
