@@ -10,11 +10,40 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
+  # Dry-run check for pull requests
+  release-plz-dry-run:
+    name: Release-plz Dry Run
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install release-plz
+        run: cargo install release-plz --locked
+
+      - name: Run release-plz dry-run
+        run: |
+          echo "🧪 Running release-plz dry-run to check what would be released..."
+          release-plz release --dry-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Actual release for main branch pushes
   release-plz:
     name: Release-plz
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
