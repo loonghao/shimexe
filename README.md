@@ -47,21 +47,21 @@ scoop install shimexe
 
 **Unix-like systems (macOS, Linux):**
 ```bash
-curl -LsSf https://github.com/loonghao/shimexe/install.sh | sh
+curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://github.com/loonghao/shimexe/install.ps1 | iex
+irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex
 ```
 
 **Install specific version:**
 ```bash
 # Unix
-curl -LsSf https://github.com/loonghao/shimexe/0.2.1/install.sh | sh
+SHIMEXE_VERSION="0.3.0" curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
 
 # Windows
-$env:SHIMEXE_VERSION="0.2.1"; irm https://github.com/loonghao/shimexe/install.ps1 | iex
+$env:SHIMEXE_VERSION="0.3.0"; irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex
 ```
 
 ### From GitHub Releases
