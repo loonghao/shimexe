@@ -77,21 +77,22 @@ function Get-LatestVersion {
 
             $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -TimeoutSec 10
 
-            # Find all shimexe releases and sort by version
+            # Find all shimexe releases (both v* and shimexe-v* formats) and sort by version
             $shimexeReleases = @()
             foreach ($release in $response) {
-                if ($release.tag_name -match "^shimexe-v([0-9]+\.[0-9]+\.[0-9]+)$") {
+                # Match both v0.3.3 and shimexe-v0.1.2 formats
+                if ($release.tag_name -match "^(shimexe-)?v([0-9]+\.[0-9]+\.[0-9]+)$") {
                     $shimexeReleases += @{
-                        Version       = [System.Version]$matches[1]
+                        Version       = [System.Version]$matches[2]
                         TagName       = $release.tag_name
-                        VersionString = $matches[1]
+                        VersionString = $matches[2]
                     }
                 }
             }
 
             # Sort by version and get the latest
             if ($shimexeReleases.Count -gt 0) {
-                $latest = $shimexeReleases | Sort-Object Version -Descending | Select-Object -First 1
+                $latest = $shimexeReleases | Sort-Object { $_.Version } -Descending | Select-Object -First 1
                 $version = $latest.VersionString
                 Write-Info "Found latest shimexe version: v$version"
                 return $version
@@ -125,17 +126,10 @@ function Get-LatestVersion {
         $releasesUrl = "https://github.com/$RepoOwner/$RepoName/releases"
         $response = Invoke-WebRequest -Uri $releasesUrl -UseBasicParsing -TimeoutSec 10
 
-        # Extract shimexe version from page content (look for shimexe-v pattern)
-        if ($response.Content -match 'releases/tag/shimexe-v([0-9]+\.[0-9]+\.[0-9]+)') {
-            $version = $matches[1]
+        # Extract version from page content (look for both v* and shimexe-v* patterns)
+        if ($response.Content -match 'releases/tag/(shimexe-)?v([0-9]+\.[0-9]+\.[0-9]+)') {
+            $version = $matches[2]
             Write-Info "Found shimexe version via fallback: v$version"
-            return $version
-        }
-
-        # Fallback to any version pattern if shimexe-v not found
-        if ($response.Content -match 'releases/tag/v?([0-9]+\.[0-9]+\.[0-9]+)') {
-            $version = $matches[1]
-            Write-Info "Found version via fallback: v$version"
             return $version
         }
     }

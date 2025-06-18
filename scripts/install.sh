@@ -83,11 +83,11 @@ get_latest_version() {
         info "Attempting to get latest shimexe version (attempt $i/$max_retries)..."
 
         if command -v curl >/dev/null 2>&1; then
-            # Get all releases, filter for shimexe-v* pattern, and sort by version
-            version=$(curl -s -H "User-Agent: shimexe-installer/1.0" -H "Accept: application/vnd.github.v3+json" --connect-timeout 10 "$api_url" 2>/dev/null | grep '"tag_name":' | grep 'shimexe-v' | sed -E 's/.*"shimexe-v([^"]+)".*/\1/' | sort -V | tail -1 || true)
+            # Get all releases, filter for both v* and shimexe-v* patterns, and sort by version
+            version=$(curl -s -H "User-Agent: shimexe-installer/1.0" -H "Accept: application/vnd.github.v3+json" --connect-timeout 10 "$api_url" 2>/dev/null | grep '"tag_name":' | grep -E '"(shimexe-)?v[0-9]+\.[0-9]+\.[0-9]+"' | sed -E 's/.*"(shimexe-)?v([^"]+)".*/\2/' | sort -V | tail -1 || true)
         elif command -v wget >/dev/null 2>&1; then
-            # Get all releases, filter for shimexe-v* pattern, and sort by version
-            version=$(wget -qO- --timeout=10 --header="User-Agent: shimexe-installer/1.0" --header="Accept: application/vnd.github.v3+json" "$api_url" 2>/dev/null | grep '"tag_name":' | grep 'shimexe-v' | sed -E 's/.*"shimexe-v([^"]+)".*/\1/' | sort -V | tail -1 || true)
+            # Get all releases, filter for both v* and shimexe-v* patterns, and sort by version
+            version=$(wget -qO- --timeout=10 --header="User-Agent: shimexe-installer/1.0" --header="Accept: application/vnd.github.v3+json" "$api_url" 2>/dev/null | grep '"tag_name":' | grep -E '"(shimexe-)?v[0-9]+\.[0-9]+\.[0-9]+"' | sed -E 's/.*"(shimexe-)?v([^"]+)".*/\2/' | sort -V | tail -1 || true)
         else
             error "Neither curl nor wget is available"
             exit 1
@@ -112,19 +112,11 @@ get_latest_version() {
     local releases_url="https://github.com/${SHIMEXE_REPO}/releases"
 
     if command -v curl >/dev/null 2>&1; then
-        # Look for shimexe-v pattern first
-        version=$(curl -s -L --connect-timeout 10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/shimexe-v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed -E 's/.*shimexe-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
-        # Fallback to any version pattern
-        if [ -z "$version" ]; then
-            version=$(curl -s -L --connect-timeout 10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/v\?[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed -E 's/.*v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
-        fi
+        # Look for both v* and shimexe-v* patterns and get the highest version
+        version=$(curl -s -L --connect-timeout 10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/\(shimexe-\)\?v[0-9]\+\.[0-9]\+\.[0-9]\+' | sed -E 's/.*\(shimexe-\)?v([0-9]+\.[0-9]+\.[0-9]+).*/\1/' | sort -V | tail -1 || true)
     elif command -v wget >/dev/null 2>&1; then
-        # Look for shimexe-v pattern first
-        version=$(wget -qO- --timeout=10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/shimexe-v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed -E 's/.*shimexe-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
-        # Fallback to any version pattern
-        if [ -z "$version" ]; then
-            version=$(wget -qO- --timeout=10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/v\?[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed -E 's/.*v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
-        fi
+        # Look for both v* and shimexe-v* patterns and get the highest version
+        version=$(wget -qO- --timeout=10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/\(shimexe-\)\?v[0-9]\+\.[0-9]\+\.[0-9]\+' | sed -E 's/.*\(shimexe-\)?v([0-9]+\.[0-9]+\.[0-9]+).*/\1/' | sort -V | tail -1 || true)
     fi
 
     if [ -n "$version" ]; then
