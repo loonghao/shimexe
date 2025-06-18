@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.4](https://github.com/loonghao/shimexe/compare/v0.3.3...v0.3.4) - 2025-06-18
+
+### Fixed
+
+- support both v* and shimexe-v* tag formats in install scripts
+- improve version detection and release changelog formatting
+- configure release-plz to show only current version changelog in releases
+- resolve version detection issues in install scripts and update Scoop manifest
+
 ## [0.3.3](https://github.com/loonghao/shimexe/compare/v0.3.2...v0.3.3) - 2025-06-18
 
 ### Added
