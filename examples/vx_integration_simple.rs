@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use shimexe_core::prelude::*;
+use shimexe_core::{ShimCore, ShimMetadata, SourceType};
 use std::path::PathBuf;
 
 /// Simplified VX integration using ShimManager
@@ -16,9 +17,9 @@ impl VxShimIntegration {
     pub fn new(vx_home: PathBuf) -> Result<Self> {
         let shim_dir = vx_home.join("shims");
         let metadata_dir = vx_home.join("metadata");
-        
+
         let manager = ShimManager::with_metadata_dir(shim_dir, metadata_dir)?;
-        
+
         Ok(Self { manager })
     }
 
@@ -33,13 +34,20 @@ impl VxShimIntegration {
                 .tag(name)
         })?;
 
-        println!("✅ Installed {} v{} -> {}", name, version, shim_path.display());
+        println!(
+            "✅ Installed {} v{} -> {}",
+            name,
+            version,
+            shim_path.display()
+        );
         Ok(shim_path)
     }
 
     /// Switch tool to a different version
     pub fn switch_version(&self, name: &str, version: &str, tool_path: &str) -> Result<()> {
-        let config = self.manager.builder(name)
+        let config = self
+            .manager
+            .builder(name)
             .path(tool_path)
             .version(version)
             .description(format!("{} managed by vx", name))
@@ -55,7 +63,7 @@ impl VxShimIntegration {
     /// List all managed tools
     pub fn list_tools(&self) -> Result<()> {
         let shims = self.manager.list_shims()?;
-        
+
         if shims.is_empty() {
             println!("No tools installed");
             return Ok(());
@@ -67,7 +75,7 @@ impl VxShimIntegration {
             let status = if shim.is_valid { "✅" } else { "❌" };
             println!("  {} {} v{}", status, shim.name, version);
         }
-        
+
         Ok(())
     }
 
@@ -80,17 +88,17 @@ impl VxShimIntegration {
 
     /// Execute a tool
     pub fn execute_tool(&self, name: &str, args: &[String]) -> Result<i32> {
-        self.manager.execute_shim(name, args)
+        Ok(self.manager.execute_shim(name, args)?)
     }
 
     /// Check if a tool is installed and valid
     pub fn is_tool_valid(&self, name: &str) -> Result<bool> {
-        self.manager.validate_shim(name)
+        Ok(self.manager.validate_shim(name)?)
     }
 
     /// Get tool information
     pub fn get_tool_info(&self, name: &str) -> Result<Option<ShimInfo>> {
-        self.manager.get_shim(name)
+        Ok(self.manager.get_shim(name)?)
     }
 }
 
@@ -100,16 +108,28 @@ fn main() -> Result<()> {
     let vx = VxShimIntegration::new(vx_home)?;
 
     // Install Node.js
-    vx.install_tool("node", "18.17.0", "/home/user/.vx/versions/node/18.17.0/bin/node")?;
-    
+    vx.install_tool(
+        "node",
+        "18.17.0",
+        "/home/user/.vx/versions/node/18.17.0/bin/node",
+    )?;
+
     // Install Python
-    vx.install_tool("python", "3.11.4", "/home/user/.vx/versions/python/3.11.4/bin/python")?;
+    vx.install_tool(
+        "python",
+        "3.11.4",
+        "/home/user/.vx/versions/python/3.11.4/bin/python",
+    )?;
 
     // List tools
     vx.list_tools()?;
 
     // Switch Node.js version
-    vx.switch_version("node", "20.5.0", "/home/user/.vx/versions/node/20.5.0/bin/node")?;
+    vx.switch_version(
+        "node",
+        "20.5.0",
+        "/home/user/.vx/versions/node/20.5.0/bin/node",
+    )?;
 
     // Execute a tool
     let exit_code = vx.execute_tool("node", &["--version".to_string()])?;
@@ -122,7 +142,11 @@ fn main() -> Result<()> {
 
     // Get detailed tool info
     if let Some(info) = vx.get_tool_info("node")? {
-        println!("📋 Node.js info: {} v{}", info.path, info.version.unwrap_or_default());
+        println!(
+            "📋 Node.js info: {} v{}",
+            info.path,
+            info.version.unwrap_or_default()
+        );
     }
 
     Ok(())
@@ -191,7 +215,7 @@ mod old_approach_comparison {
     // Old approach (complex, error-prone)
     fn old_create_shim(name: &str, path: &str, version: &str) -> Result<()> {
         use std::collections::HashMap;
-        
+
         // Manual config creation
         let config = ShimConfig {
             shim: ShimCore {
@@ -225,14 +249,19 @@ mod old_approach_comparison {
     }
 
     // New approach (simple, clean)
-    fn new_create_shim(manager: &ShimManager, name: &str, path: &str, version: &str) -> Result<PathBuf> {
-        manager.create_shim_with_builder(name, |builder| {
+    fn new_create_shim(
+        manager: &ShimManager,
+        name: &str,
+        path: &str,
+        version: &str,
+    ) -> Result<PathBuf> {
+        Ok(manager.create_shim_with_builder(name, |builder| {
             builder
                 .path(path)
                 .version(version)
                 .description(format!("{} managed by vx", name))
                 .tag("vx-managed")
                 .tag(name)
-        })
+        })?)
     }
 }
