@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.3](https://github.com/loonghao/shimexe/compare/v0.3.2...v0.3.3) - 2025-06-18
+
+### Added
+
+- add comprehensive vx integration example
+- add high-level ShimManager API and update Chinese README
+- enhance README with logo and improve vx integration
+
+### Fixed
+
+- resolve clippy warnings and compilation errors
+- correct PATH usage and improve user guidance
+- add retry logic and fallback for GitHub API rate limits
+
 ## [0.3.2](https://github.com/loonghao/shimexe/compare/v0.3.1...v0.3.2) - 2025-06-17
 
 ### Fixed

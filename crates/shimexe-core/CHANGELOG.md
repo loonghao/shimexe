@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.3](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.3.2...shimexe-core-v0.3.3) - 2025-06-18
+
+### Added
+
+- add high-level ShimManager API and update Chinese README
+
+### Fixed
+
+- resolve clippy warnings and compilation errors
+
 ## [0.3.0](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.2.1...shimexe-core-v0.3.0) - 2025-06-17
 
 ### Added
