@@ -71,18 +71,59 @@ get_release_filename() {
     esac
 }
 
-# Get latest version from GitHub API
+# Get latest version from GitHub API with retry and fallback
 get_latest_version() {
     local api_url="https://api.github.com/repos/${SHIMEXE_REPO}/releases/latest"
-    
+    local max_retries=3
+    local retry_delay=2
+    local version=""
+
+    # Try API with retries
+    for i in $(seq 1 $max_retries); do
+        info "Attempting to get latest version (attempt $i/$max_retries)..."
+
+        if command -v curl >/dev/null 2>&1; then
+            version=$(curl -s -H "User-Agent: shimexe-installer/1.0" -H "Accept: application/vnd.github.v3+json" --connect-timeout 10 "$api_url" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/^v//' || true)
+        elif command -v wget >/dev/null 2>&1; then
+            version=$(wget -qO- --timeout=10 --header="User-Agent: shimexe-installer/1.0" --header="Accept: application/vnd.github.v3+json" "$api_url" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/^v//' || true)
+        else
+            error "Neither curl nor wget is available"
+            exit 1
+        fi
+
+        if [ -n "$version" ]; then
+            info "Found latest version: v$version"
+            echo "$version"
+            return 0
+        fi
+
+        warn "Attempt $i failed"
+        if [ $i -lt $max_retries ]; then
+            info "Retrying in $retry_delay seconds..."
+            sleep $retry_delay
+            retry_delay=$((retry_delay * 2))  # Exponential backoff
+        fi
+    done
+
+    # Fallback: try to get version from releases page HTML
+    warn "API failed, trying fallback method..."
+    local releases_url="https://github.com/${SHIMEXE_REPO}/releases/latest"
+
     if command -v curl >/dev/null 2>&1; then
-        curl -s "$api_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/^v//'
+        version=$(curl -s -L --connect-timeout 10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/v\?[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed -E 's/.*v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "$api_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/^v//'
-    else
-        error "Neither curl nor wget is available"
-        exit 1
+        version=$(wget -qO- --timeout=10 "$releases_url" 2>/dev/null | grep -o 'releases/tag/v\?[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 | sed -E 's/.*v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
     fi
+
+    if [ -n "$version" ]; then
+        info "Found version via fallback: v$version"
+        echo "$version"
+        return 0
+    fi
+
+    error "Failed to get latest version after all attempts. Please specify a version manually:"
+    error "Example: SHIMEXE_VERSION='0.3.1' curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh"
+    exit 1
 }
 
 # Download and install shimexe
