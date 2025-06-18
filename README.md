@@ -1,124 +1,236 @@
+<div align="center">
+
+<img src="assets/icon.svg" alt="shimexe logo" width="120" height="120">
+
 # shimexe
+
+**🚀 The Modern Executable Shim Manager**
+
+*Transform any executable into a smart, portable shim with HTTP download support*
 
 [![CI](https://github.com/loonghao/shimexe/workflows/CI/badge.svg)](https://github.com/loonghao/shimexe/actions)
 [![Crates.io](https://img.shields.io/crates/v/shimexe.svg)](https://crates.io/crates/shimexe)
 [![Documentation](https://docs.rs/shimexe/badge.svg)](https://docs.rs/shimexe)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/loonghao/shimexe#license)
+[![Downloads](https://img.shields.io/crates/d/shimexe.svg)](https://crates.io/crates/shimexe)
+[![GitHub Stars](https://img.shields.io/github/stars/loonghao/shimexe?style=social)](https://github.com/loonghao/shimexe)
 
-[中文文档](README_zh.md)
+[📖 中文文档](README_zh.md) • [🚀 Quick Start](#quick-start) • [📦 Installation](#installation) • [🔧 Examples](#examples)
 
-A modern, cross-platform executable shim manager with HTTP URL download support, dynamic template system, and enhanced argument handling capabilities.
+</div>
 
-## Features
+---
 
-- 🚀 **Cross-platform**: Works on Windows, macOS, and Linux
-- 🌐 **HTTP URL Support**: Download executables directly from URLs
-- 📝 **TOML Configuration**: Human-readable configuration files
-- 🔧 **Environment Variable Expansion**: Support for `${VAR:default}` syntax
-- 🎯 **Single Binary**: All functionality in one executable
-- 📦 **Package Manager Ready**: Available on crates.io and Chocolatey
-- 🔗 **API Library**: Use as a crate in your own projects
-- 🎨 **Custom Icon**: Beautiful SVG-based icon embedded in executables
-- 🤖 **Smart Name Inference**: Automatically infer application names from URLs
-- ⚡ **Auto-Download**: Missing executables are downloaded automatically at runtime
-- 🔒 **Secure Downloads**: Uses rustls-tls for secure HTTPS connections
+## 🌟 What is shimexe?
 
-## Installation
+**shimexe** is a revolutionary executable shim manager that bridges the gap between local tools and cloud-distributed applications. Create lightweight, portable shims that can automatically download, extract, and execute tools from HTTP URLs - all while maintaining the simplicity of local executables.
 
-### From Crates.io
+### 💡 Why shimexe?
 
-```bash
-cargo install shimexe
-```
+- **🌐 Cloud-Native**: Download tools directly from GitHub releases, CDNs, or any HTTP URL
+- **📦 Archive Smart**: Automatically extract zip files and discover executables
+- **🔧 Zero Config**: Smart defaults with powerful customization options
+- **🚀 Portable**: Shims work independently without requiring shimexe installation
+- **⚡ Fast**: Efficient caching and smart re-download logic
+- **🔒 Secure**: Built with Rust and rustls-tls for secure HTTPS connections
 
-### From Chocolatey (Windows)
+## ✨ Key Features
 
-```powershell
-choco install shimexe
-```
+<table>
+<tr>
+<td width="50%">
 
-### From Scoop (Windows)
+### 🌐 **Cloud-First Design**
+- **HTTP URL Support**: Download from GitHub, CDNs, any URL
+- **Archive Extraction**: Auto-extract zip files and find executables
+- **Smart Caching**: Efficient download and storage management
+- **Auto-Recovery**: Re-download missing files automatically
 
-```powershell
-scoop install shimexe
-```
+### 🔧 **Developer Experience**
+- **Zero Configuration**: Works out of the box with smart defaults
+- **TOML Configuration**: Human-readable, version-controllable configs
+- **Environment Variables**: Powerful `${VAR:default}` expansion
+- **Template System**: Dynamic path and argument resolution
 
-### Quick Install Scripts
+</td>
+<td width="50%">
 
-**Unix-like systems (macOS, Linux):**
+### 🚀 **Production Ready**
+- **Cross-Platform**: Windows, macOS, Linux support
+- **Static Linking**: No runtime dependencies required
+- **Portable Shims**: Work independently when distributed
+- **Secure**: Built with Rust and rustls-tls
+
+### 📦 **Integration Friendly**
+- **Package Managers**: Available on Crates.io, Chocolatey, Scoop
+- **API Library**: Use `shimexe-core` in your own projects
+- **Tool Managers**: Perfect for vx, rye, and similar tools
+- **CI/CD Ready**: Ideal for automated environments
+
+</td>
+</tr>
+</table>
+
+## 📦 Installation
+
+<div align="center">
+
+### 🚀 **One-Line Install** (Recommended)
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+**🐧 Unix/Linux/macOS**
 ```bash
 curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
 ```
 
-**Windows (PowerShell):**
+**🪟 Windows (PowerShell)**
 ```powershell
 irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex
 ```
 
-**Install specific version:**
+</td>
+<td width="50%">
+
+**📌 Specific Version**
 ```bash
-# Unix
-SHIMEXE_VERSION="0.3.0" curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
+# Unix/Linux/macOS
+SHIMEXE_VERSION="0.3.1" curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
 
 # Windows
-$env:SHIMEXE_VERSION="0.3.0"; irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex
+$env:SHIMEXE_VERSION="0.3.1"; irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex
 ```
 
-### From GitHub Releases
+</td>
+</tr>
+</table>
 
-Download the latest binary from [GitHub Releases](https://github.com/loonghao/shimexe/releases).
+### 📦 **Package Managers**
 
-## Quick Start
+<table>
+<tr>
+<td width="33%">
 
-### Traditional Local Executables
+**🦀 Cargo**
+```bash
+cargo install shimexe
+```
 
-1. Initialize shimexe:
-   ```bash
-   shimexe init --examples
-   ```
+</td>
+<td width="33%">
 
-2. Add a local executable shim:
-   ```bash
-   shimexe add rust --path "${RUST_HOME:~/.cargo/bin}/rustc${EXE_EXT:.exe}" --args "--version"
-   ```
+**🍫 Chocolatey**
+```powershell
+choco install shimexe
+```
 
-### HTTP URL Downloads
+</td>
+<td width="33%">
 
-1. Download and create shim with explicit name:
-   ```bash
-   shimexe add it --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
-   ```
+**🥄 Scoop**
+```powershell
+scoop install shimexe
+```
 
-2. Auto-infer name from URL:
-   ```bash
-   shimexe add --path https://example.com/tools/my-tool.exe
-   # Creates 'my-tool' shim automatically
-   ```
+</td>
+</tr>
+</table>
 
-### Archive Support (New!)
+### 📥 **Manual Download**
 
-shimexe now supports downloading and extracting archives (zip files) with automatic executable discovery:
+Download pre-built binaries from [**GitHub Releases**](https://github.com/loonghao/shimexe/releases) for your platform.
 
-1. Download and extract zip archive:
-   ```bash
-   shimexe add plz --path https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.135/release-plz-x86_64-pc-windows-msvc.zip
-   ```
+## 🚀 Quick Start
 
-2. Auto-extract and create shims for all executables:
-   ```bash
-   shimexe add tools --path https://example.com/multi-tool-package.zip
-   # Extracts archive and creates shims for all .exe files found
-   ```
+<div align="center">
 
-3. List all shims:
-   ```bash
-   shimexe list --detailed
-   ```
+### **Get Started in 30 Seconds!**
 
-4. Run your shim (auto-downloads and extracts if missing):
-   ```bash
-   plz --help
-   ```
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+### 🌐 **Cloud Tools** (The Magic!)
+
+**1. Download from GitHub Releases**
+```bash
+# Download and create shim automatically
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip
+
+# Use it immediately!
+uv --version
+```
+
+**2. Auto-infer tool names**
+```bash
+# Creates 'installer-analyzer' shim
+shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+
+installer-analyzer --help
+```
+
+**3. Archive extraction**
+```bash
+# Extracts zip and finds all executables
+shimexe add devtools --path https://example.com/tools.zip
+
+# Creates multiple shims automatically!
+```
+
+</td>
+<td width="50%">
+
+### 🔧 **Local Tools** (Traditional)
+
+**1. Initialize with examples**
+```bash
+shimexe init --examples
+```
+
+**2. Create local shims**
+```bash
+# Rust compiler shim
+shimexe add rustc --path "${RUST_HOME:~/.cargo/bin}/rustc${EXE_EXT:.exe}"
+
+# Python with custom args
+shimexe add py --path python --args "-u"
+```
+
+**3. Manage your shims**
+```bash
+# List all shims
+shimexe list --detailed
+
+# Update existing shim
+shimexe update rustc --args "--version"
+
+# Remove shim
+shimexe remove old-tool
+```
+
+</td>
+</tr>
+</table>
+
+### 🎯 **Real-World Examples**
+
+```bash
+# Popular tools you can install instantly:
+shimexe add rg --path https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip
+shimexe add fd --path https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip
+shimexe add bat --path https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip
+
+# Now use them anywhere!
+rg "TODO" --type rust
+fd "*.rs" src/
+bat README.md
+```
 
 ## Configuration Format
 
