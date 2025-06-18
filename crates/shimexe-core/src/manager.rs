@@ -1,10 +1,10 @@
 //! High-level shim management API for tool managers like vx, rye, etc.
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::fs;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use tracing::info;
 
 use crate::config::{ShimConfig, ShimCore, ShimMetadata, SourceType};
 use crate::downloader::Downloader;
@@ -95,14 +95,14 @@ impl ShimBuilder {
     pub fn download_url(mut self, url: impl Into<String>) -> Self {
         let url = url.into();
         self.download_url = Some(url.clone());
-        
+
         // Auto-detect source type based on URL
         if url.ends_with(".zip") || url.ends_with(".tar.gz") || url.ends_with(".tgz") {
             self.source_type = SourceType::Archive;
         } else if Downloader::is_url(&url) {
             self.source_type = SourceType::Url;
         }
-        
+
         self
     }
 
@@ -144,9 +144,9 @@ impl ShimBuilder {
 
     /// Build the shim configuration
     pub fn build(self) -> Result<ShimConfig> {
-        let path = self.path.ok_or_else(|| {
-            ShimError::Config("Shim path is required".to_string())
-        })?;
+        let path = self
+            .path
+            .ok_or_else(|| ShimError::Config("Shim path is required".to_string()))?;
 
         let config = ShimConfig {
             shim: ShimCore {
@@ -173,7 +173,7 @@ impl ShimManager {
     /// Create a new shim manager
     pub fn new(shim_dir: PathBuf) -> Result<Self> {
         fs::create_dir_all(&shim_dir)?;
-        
+
         Ok(Self {
             shim_dir,
             metadata_dir: None,
@@ -184,7 +184,7 @@ impl ShimManager {
     pub fn with_metadata_dir(shim_dir: PathBuf, metadata_dir: PathBuf) -> Result<Self> {
         fs::create_dir_all(&shim_dir)?;
         fs::create_dir_all(&metadata_dir)?;
-        
+
         Ok(Self {
             shim_dir,
             metadata_dir: Some(metadata_dir),
@@ -198,7 +198,9 @@ impl ShimManager {
 
     /// Create a shim from configuration
     pub fn create_shim(&self, config: ShimConfig) -> Result<PathBuf> {
-        let config_path = self.shim_dir.join(format!("{}.shim.toml", config.shim.name));
+        let config_path = self
+            .shim_dir
+            .join(format!("{}.shim.toml", config.shim.name));
         let shim_path = self.get_shim_executable_path(&config.shim.name);
 
         // Save configuration
@@ -207,12 +209,20 @@ impl ShimManager {
         // Copy shimexe binary as the shim executable
         self.copy_shimexe_binary(&shim_path)?;
 
-        info!("Created shim '{}' at {}", config.shim.name, shim_path.display());
+        info!(
+            "Created shim '{}' at {}",
+            config.shim.name,
+            shim_path.display()
+        );
         Ok(shim_path)
     }
 
     /// Create a shim using the builder pattern
-    pub fn create_shim_with_builder<F>(&self, name: impl Into<String>, builder_fn: F) -> Result<PathBuf>
+    pub fn create_shim_with_builder<F>(
+        &self,
+        name: impl Into<String>,
+        builder_fn: F,
+    ) -> Result<PathBuf>
     where
         F: FnOnce(ShimBuilder) -> ShimBuilder,
     {
@@ -259,10 +269,12 @@ impl ShimManager {
             let path = entry.path();
 
             if let Some(extension) = path.extension() {
-                if extension == "toml" && path.file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.ends_with(".shim"))
-                    .unwrap_or(false)
+                if extension == "toml"
+                    && path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.ends_with(".shim"))
+                        .unwrap_or(false)
                 {
                     if let Ok(config) = ShimConfig::from_file(&path) {
                         let shim_path = self.get_shim_executable_path(&config.shim.name);
@@ -290,7 +302,7 @@ impl ShimManager {
     /// Get shim information by name
     pub fn get_shim(&self, name: &str) -> Result<Option<ShimInfo>> {
         let config_path = self.shim_dir.join(format!("{}.shim.toml", name));
-        
+
         if !config_path.exists() {
             return Ok(None);
         }
@@ -325,7 +337,7 @@ impl ShimManager {
     /// Execute a shim
     pub fn execute_shim(&self, name: &str, args: &[String]) -> Result<i32> {
         let config_path = self.shim_dir.join(format!("{}.shim.toml", name));
-        
+
         if !config_path.exists() {
             return Err(ShimError::Config(format!("Shim '{}' not found", name)));
         }
@@ -337,7 +349,7 @@ impl ShimManager {
     /// Validate a shim
     pub fn validate_shim(&self, name: &str) -> Result<bool> {
         let config_path = self.shim_dir.join(format!("{}.shim.toml", name));
-        
+
         if !config_path.exists() {
             return Ok(false);
         }
