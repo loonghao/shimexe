@@ -58,17 +58,77 @@ function Get-ReleaseFileName {
     }
 }
 
-# Get latest version from GitHub API
+# Get latest version from GitHub API with retry and fallback
 function Get-LatestVersion {
+    $maxRetries = 3
+    $retryDelay = 2
+
+    for ($i = 1; $i -le $maxRetries; $i++) {
+        try {
+            Write-Info "Attempting to get latest version (attempt $i/$maxRetries)..."
+            $apiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/releases/latest"
+
+            # Add headers to avoid rate limiting issues
+            $headers = @{
+                'User-Agent' = 'shimexe-installer/1.0'
+                'Accept'     = 'application/vnd.github.v3+json'
+            }
+
+            $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -TimeoutSec 10
+            $version = $response.tag_name -replace '^v', ''
+            Write-Info "Found latest version: v$version"
+            return $version
+        }
+        catch {
+            $errorMessage = $_.Exception.Message
+            Write-Warn "Attempt $i failed: $errorMessage"
+
+            # Check if it's a rate limit error
+            if ($errorMessage -like "*rate limit*" -or $errorMessage -like "*403*") {
+                Write-Warn "GitHub API rate limit detected"
+                if ($i -lt $maxRetries) {
+                    Write-Info "Waiting $retryDelay seconds before retry..."
+                    Start-Sleep -Seconds $retryDelay
+                    $retryDelay *= 2  # Exponential backoff
+                }
+            }
+            elseif ($i -lt $maxRetries) {
+                Write-Info "Retrying in $retryDelay seconds..."
+                Start-Sleep -Seconds $retryDelay
+            }
+        }
+    }
+
+    # Fallback: try to get version from releases page HTML
+    Write-Warn "API failed, trying fallback method..."
     try {
-        $apiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/releases/latest"
-        $response = Invoke-RestMethod -Uri $apiUrl -Method Get
-        return $response.tag_name -replace '^v', ''
+        $releasesUrl = "https://github.com/$RepoOwner/$RepoName/releases/latest"
+        $response = Invoke-WebRequest -Uri $releasesUrl -UseBasicParsing -TimeoutSec 10
+
+        # Extract version from redirect URL or page content
+        if ($response.BaseResponse.ResponseUri) {
+            $redirectUrl = $response.BaseResponse.ResponseUri.ToString()
+            if ($redirectUrl -match "/releases/tag/v?([0-9]+\.[0-9]+\.[0-9]+)") {
+                $version = $matches[1]
+                Write-Info "Found version via fallback: v$version"
+                return $version
+            }
+        }
+
+        # Try to extract from page content
+        if ($response.Content -match 'releases/tag/v?([0-9]+\.[0-9]+\.[0-9]+)') {
+            $version = $matches[1]
+            Write-Info "Found version via page content: v$version"
+            return $version
+        }
     }
     catch {
-        Write-Error "Failed to get latest version: $_"
-        exit 1
+        Write-Warn "Fallback method also failed: $_"
     }
+
+    Write-Error "Failed to get latest version after all attempts. Please specify a version manually using: `$env:SHIMEXE_VERSION='x.y.z'"
+    Write-Host "Example: `$env:SHIMEXE_VERSION='0.3.1'; irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex"
+    exit 1
 }
 
 # Download and install shimexe
