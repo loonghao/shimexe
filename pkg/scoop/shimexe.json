@@ -1,16 +1,18 @@
 {
-    "version": "0.1.3",
-    "description": "A powerful shim manager for Windows that creates lightweight wrappers for executables",
+    "version": "0.3.3",
+    "description": "A modern, cross-platform executable shim manager with HTTP URL download support, dynamic template system, and enhanced argument handling capabilities",
     "homepage": "https://github.com/loonghao/shimexe",
     "license": "MIT",
-    "url": "https://github.com/loonghao/shimexe/releases/download/v0.1.3/shimexe-x86_64-pc-windows-msvc.zip",
+    "url": "https://github.com/loonghao/shimexe/releases/download/shimexe-v0.3.3/shimexe-Windows-msvc-x86_64.zip",
     "hash": "",
     "extract_dir": "",
     "bin": "shimexe.exe",
     "checkver": {
-        "github": "https://github.com/loonghao/shimexe"
+        "url": "https://api.github.com/repos/loonghao/shimexe/releases",
+        "jsonpath": "$[?(@.tag_name =~ /^shimexe-v/)].tag_name",
+        "regex": "shimexe-v([\\d.]+)"
     },
     "autoupdate": {
-        "url": "https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-x86_64-pc-windows-msvc.zip"
+        "url": "https://github.com/loonghao/shimexe/releases/download/shimexe-v$version/shimexe-Windows-msvc-x86_64.zip"
     }
 }

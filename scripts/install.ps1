@@ -58,15 +58,16 @@ function Get-ReleaseFileName {
     }
 }
 
-# Get latest version from GitHub API with retry and fallback
+# Get latest shimexe version from GitHub API with retry and fallback
 function Get-LatestVersion {
     $maxRetries = 3
     $retryDelay = 2
 
     for ($i = 1; $i -le $maxRetries; $i++) {
         try {
-            Write-Info "Attempting to get latest version (attempt $i/$maxRetries)..."
-            $apiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/releases/latest"
+            Write-Info "Attempting to get latest shimexe version (attempt $i/$maxRetries)..."
+            # Use releases endpoint to get all releases and filter for shimexe-v*
+            $apiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/releases"
 
             # Add headers to avoid rate limiting issues
             $headers = @{
@@ -75,9 +76,17 @@ function Get-LatestVersion {
             }
 
             $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -TimeoutSec 10
-            $version = $response.tag_name -replace '^v', ''
-            Write-Info "Found latest version: v$version"
-            return $version
+
+            # Find the latest shimexe release (not shimexe-core)
+            foreach ($release in $response) {
+                if ($release.tag_name -match "^shimexe-v([0-9]+\.[0-9]+\.[0-9]+)$") {
+                    $version = $matches[1]
+                    Write-Info "Found latest shimexe version: v$version"
+                    return $version
+                }
+            }
+
+            Write-Warn "No shimexe releases found in API response"
         }
         catch {
             $errorMessage = $_.Exception.Message
@@ -102,23 +111,20 @@ function Get-LatestVersion {
     # Fallback: try to get version from releases page HTML
     Write-Warn "API failed, trying fallback method..."
     try {
-        $releasesUrl = "https://github.com/$RepoOwner/$RepoName/releases/latest"
+        $releasesUrl = "https://github.com/$RepoOwner/$RepoName/releases"
         $response = Invoke-WebRequest -Uri $releasesUrl -UseBasicParsing -TimeoutSec 10
 
-        # Extract version from redirect URL or page content
-        if ($response.BaseResponse.ResponseUri) {
-            $redirectUrl = $response.BaseResponse.ResponseUri.ToString()
-            if ($redirectUrl -match "/releases/tag/v?([0-9]+\.[0-9]+\.[0-9]+)") {
-                $version = $matches[1]
-                Write-Info "Found version via fallback: v$version"
-                return $version
-            }
+        # Extract shimexe version from page content (look for shimexe-v pattern)
+        if ($response.Content -match 'releases/tag/shimexe-v([0-9]+\.[0-9]+\.[0-9]+)') {
+            $version = $matches[1]
+            Write-Info "Found shimexe version via fallback: v$version"
+            return $version
         }
 
-        # Try to extract from page content
+        # Fallback to any version pattern if shimexe-v not found
         if ($response.Content -match 'releases/tag/v?([0-9]+\.[0-9]+\.[0-9]+)') {
             $version = $matches[1]
-            Write-Info "Found version via page content: v$version"
+            Write-Info "Found version via fallback: v$version"
             return $version
         }
     }
