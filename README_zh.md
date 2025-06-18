@@ -144,6 +144,75 @@ scoop install shimexe
 
 从 [**GitHub Releases**](https://github.com/loonghao/shimexe/releases) 下载适合您平台的预构建二进制文件。
 
+---
+
+## ⚙️ **PATH 配置**
+
+<div align="center">
+
+### **选择您的方式**
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔧 **方式一：自动配置 PATH** (推荐)
+
+创建 shim 时添加 `--add-system-path`：
+
+```bash
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip --add-system-path
+
+# 直接使用
+uv --version
+```
+
+**优点：**
+- ✅ 直接通过名称使用工具
+- ✅ 像系统安装的工具一样工作
+- ✅ 自动 PATH 管理
+
+</td>
+<td width="50%">
+
+### 🏃 **方式二：使用 `shimexe run`** (无需设置)
+
+通过 shimexe 命令运行工具：
+
+```bash
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip
+
+# 通过 shimexe run 使用
+shimexe run uv --version
+```
+
+**优点：**
+- ✅ 无需修改 PATH
+- ✅ 明确的工具执行
+- ✅ 立即可用
+
+</td>
+</tr>
+</table>
+
+### 📍 **手动 PATH 设置**
+
+如果您喜欢手动配置，将 `~/.shimexe` 添加到您的 PATH：
+
+**Unix/Linux/macOS:**
+```bash
+echo 'export PATH="$HOME/.shimexe:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:PATH = "$env:USERPROFILE\.shimexe;$env:PATH"
+# 或通过系统属性 > 环境变量永久添加
+```
+
 ## 🚀 快速开始
 
 <div align="center">
@@ -160,19 +229,24 @@ scoop install shimexe
 
 **1. 从 GitHub Releases 下载**
 ```bash
-# 自动下载并创建 shim
-shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip
+# 自动下载并创建 shim，配置 PATH
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip --add-system-path
 
-# 立即使用！
+# 现在可以直接使用！
 uv --version
+
+# 或者不配置 PATH，使用 shimexe run：
+shimexe run uv --version
 ```
 
 **2. 自动推断工具名称**
 ```bash
-# 创建 'installer-analyzer' shim
-shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+# 创建 'installer-analyzer' shim，配置 PATH
+shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe --add-system-path
 
+# 直接使用或通过 shimexe run
 installer-analyzer --help
+shimexe run installer-analyzer --help
 ```
 
 **3. 归档提取**
@@ -221,15 +295,20 @@ shimexe remove old-tool
 ### 🎯 **真实世界示例**
 
 ```bash
-# 您可以立即安装的热门工具：
-shimexe add rg --path https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip
-shimexe add fd --path https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip
-shimexe add bat --path https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip
+# 您可以立即安装的热门工具（配置 PATH）：
+shimexe add rg --path https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip --add-system-path
+shimexe add fd --path https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip --add-system-path
+shimexe add bat --path https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip --add-system-path
 
 # 现在可以在任何地方使用它们！
 rg "TODO" --type rust
 fd "*.rs" src/
 bat README.md
+
+# 或者通过 shimexe run 使用（无需 PATH 设置）：
+shimexe run rg "TODO" --type rust
+shimexe run fd "*.rs" src/
+shimexe run bat README.md
 ```
 
 ## 配置格式

@@ -144,6 +144,75 @@ scoop install shimexe
 
 Download pre-built binaries from [**GitHub Releases**](https://github.com/loonghao/shimexe/releases) for your platform.
 
+---
+
+## ⚙️ **PATH Configuration**
+
+<div align="center">
+
+### **Choose Your Approach**
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔧 **Option 1: Auto-configure PATH** (Recommended)
+
+Add `--add-system-path` when creating shims:
+
+```bash
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip --add-system-path
+
+# Use directly
+uv --version
+```
+
+**Benefits:**
+- ✅ Use tools directly by name
+- ✅ Works like system-installed tools
+- ✅ Automatic PATH management
+
+</td>
+<td width="50%">
+
+### 🏃 **Option 2: Use `shimexe run`** (No setup)
+
+Run tools via shimexe command:
+
+```bash
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip
+
+# Use via shimexe run
+shimexe run uv --version
+```
+
+**Benefits:**
+- ✅ No PATH modification needed
+- ✅ Explicit tool execution
+- ✅ Works immediately
+
+</td>
+</tr>
+</table>
+
+### 📍 **Manual PATH Setup**
+
+If you prefer manual configuration, add `~/.shimexe` to your PATH:
+
+**Unix/Linux/macOS:**
+```bash
+echo 'export PATH="$HOME/.shimexe:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:PATH = "$env:USERPROFILE\.shimexe;$env:PATH"
+# Or add permanently via System Properties > Environment Variables
+```
+
 ## 🚀 Quick Start
 
 <div align="center">
@@ -160,27 +229,33 @@ Download pre-built binaries from [**GitHub Releases**](https://github.com/loongh
 
 **1. Download from GitHub Releases**
 ```bash
-# Download and create shim automatically
-shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip
+# Download and create shim with PATH setup
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip --add-system-path
 
-# Use it immediately!
+# Now use it directly!
 uv --version
+
+# Or without PATH setup, use shimexe run:
+shimexe run uv --version
 ```
 
 **2. Auto-infer tool names**
 ```bash
-# Creates 'installer-analyzer' shim
-shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe
+# Creates 'installer-analyzer' shim with PATH setup
+shimexe add --path https://github.com/loonghao/installer-analyzer/releases/download/v0.7.0/installer-analyzer.exe --add-system-path
 
+# Use directly or via shimexe run
 installer-analyzer --help
+shimexe run installer-analyzer --help
 ```
 
 **3. Archive extraction**
 ```bash
 # Extracts zip and finds all executables
-shimexe add devtools --path https://example.com/tools.zip
+shimexe add devtools --path https://example.com/tools.zip --add-system-path
 
 # Creates multiple shims automatically!
+# Use directly or via shimexe run
 ```
 
 </td>
@@ -221,15 +296,20 @@ shimexe remove old-tool
 ### 🎯 **Real-World Examples**
 
 ```bash
-# Popular tools you can install instantly:
-shimexe add rg --path https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip
-shimexe add fd --path https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip
-shimexe add bat --path https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip
+# Popular tools you can install instantly (with PATH setup):
+shimexe add rg --path https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip --add-system-path
+shimexe add fd --path https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip --add-system-path
+shimexe add bat --path https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip --add-system-path
 
 # Now use them anywhere!
 rg "TODO" --type rust
 fd "*.rs" src/
 bat README.md
+
+# Or use via shimexe run (no PATH setup needed):
+shimexe run rg "TODO" --type rust
+shimexe run fd "*.rs" src/
+shimexe run bat README.md
 ```
 
 ## Configuration Format
