@@ -199,7 +199,20 @@ install_shimexe() {
     if "$SHIMEXE_INSTALL_DIR/shimexe" --version >/dev/null 2>&1; then
         success "Installation verified successfully!"
         echo ""
-        echo "Get started with: shimexe --help"
+        echo "Get started:"
+        echo "  shimexe --help"
+        echo "  shimexe init --examples"
+        echo ""
+        echo "Add your first shim:"
+        echo "  # Option 1: Auto-configure PATH (recommended)"
+        echo "  shimexe add my-tool --path /path/to/tool --add-system-path"
+        echo "  my-tool --version  # Use directly"
+        echo ""
+        echo "  # Option 2: Use shimexe run (no PATH setup)"
+        echo "  shimexe add my-tool --path /path/to/tool"
+        echo "  shimexe run my-tool --version  # Use via shimexe"
+        echo ""
+        echo "Default shim directory: ~/.shimexe"
     else
         error "Installation verification failed"
         exit 1

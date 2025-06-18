@@ -196,7 +196,20 @@ function Install-Shimexe {
             & $destPath --version | Out-Null
             Write-Success "Installation verified successfully!"
             Write-Host ""
-            Write-Host "Get started with: shimexe --help"
+            Write-Host "Get started:" -ForegroundColor Yellow
+            Write-Host "  shimexe --help" -ForegroundColor Cyan
+            Write-Host "  shimexe init --examples" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "Add your first shim:" -ForegroundColor Yellow
+            Write-Host "  # Option 1: Auto-configure PATH (recommended)" -ForegroundColor Gray
+            Write-Host "  shimexe add my-tool --path /path/to/tool --add-system-path" -ForegroundColor Cyan
+            Write-Host "  my-tool --version  # Use directly" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "  # Option 2: Use shimexe run (no PATH setup)" -ForegroundColor Gray
+            Write-Host "  shimexe add my-tool --path /path/to/tool" -ForegroundColor Cyan
+            Write-Host "  shimexe run my-tool --version  # Use via shimexe" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "Default shim directory: $env:USERPROFILE\.shimexe" -ForegroundColor Gray
         }
         catch {
             Write-Error "Installation verification failed: $_"
