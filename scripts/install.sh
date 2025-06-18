@@ -83,11 +83,11 @@ get_latest_version() {
         info "Attempting to get latest shimexe version (attempt $i/$max_retries)..."
 
         if command -v curl >/dev/null 2>&1; then
-            # Get all releases and filter for shimexe-v* pattern
-            version=$(curl -s -H "User-Agent: shimexe-installer/1.0" -H "Accept: application/vnd.github.v3+json" --connect-timeout 10 "$api_url" 2>/dev/null | grep '"tag_name":' | grep 'shimexe-v' | head -1 | sed -E 's/.*"shimexe-v([^"]+)".*/\1/' || true)
+            # Get all releases, filter for shimexe-v* pattern, and sort by version
+            version=$(curl -s -H "User-Agent: shimexe-installer/1.0" -H "Accept: application/vnd.github.v3+json" --connect-timeout 10 "$api_url" 2>/dev/null | grep '"tag_name":' | grep 'shimexe-v' | sed -E 's/.*"shimexe-v([^"]+)".*/\1/' | sort -V | tail -1 || true)
         elif command -v wget >/dev/null 2>&1; then
-            # Get all releases and filter for shimexe-v* pattern
-            version=$(wget -qO- --timeout=10 --header="User-Agent: shimexe-installer/1.0" --header="Accept: application/vnd.github.v3+json" "$api_url" 2>/dev/null | grep '"tag_name":' | grep 'shimexe-v' | head -1 | sed -E 's/.*"shimexe-v([^"]+)".*/\1/' || true)
+            # Get all releases, filter for shimexe-v* pattern, and sort by version
+            version=$(wget -qO- --timeout=10 --header="User-Agent: shimexe-installer/1.0" --header="Accept: application/vnd.github.v3+json" "$api_url" 2>/dev/null | grep '"tag_name":' | grep 'shimexe-v' | sed -E 's/.*"shimexe-v([^"]+)".*/\1/' | sort -V | tail -1 || true)
         else
             error "Neither curl nor wget is available"
             exit 1

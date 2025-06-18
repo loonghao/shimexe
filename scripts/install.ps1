@@ -77,13 +77,24 @@ function Get-LatestVersion {
 
             $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -TimeoutSec 10
 
-            # Find the latest shimexe release (not shimexe-core)
+            # Find all shimexe releases and sort by version
+            $shimexeReleases = @()
             foreach ($release in $response) {
                 if ($release.tag_name -match "^shimexe-v([0-9]+\.[0-9]+\.[0-9]+)$") {
-                    $version = $matches[1]
-                    Write-Info "Found latest shimexe version: v$version"
-                    return $version
+                    $shimexeReleases += @{
+                        Version       = [System.Version]$matches[1]
+                        TagName       = $release.tag_name
+                        VersionString = $matches[1]
+                    }
                 }
+            }
+
+            # Sort by version and get the latest
+            if ($shimexeReleases.Count -gt 0) {
+                $latest = $shimexeReleases | Sort-Object Version -Descending | Select-Object -First 1
+                $version = $latest.VersionString
+                Write-Info "Found latest shimexe version: v$version"
+                return $version
             }
 
             Write-Warn "No shimexe releases found in API response"
