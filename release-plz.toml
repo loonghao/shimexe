@@ -17,6 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 """
+# Custom body template for individual releases (used in git_release_body)
+body = """
+{% for group, commits in commits | group_by(attribute="group") -%}
+### {{ group | upper_first }}
+{% for commit in commits -%}
+- {% if commit.scope %}*({{commit.scope}})* {% endif %}{% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}{% if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}){% if not loop.last %}, {% endif %}{% endfor %}){% endif %}
+{% endfor -%}
+{% endfor -%}
+"""
 
 # Package-specific configuration - only for the main shimexe CLI
 [[package]]
@@ -25,6 +34,8 @@ name = "shimexe"
 changelog_update = true
 # Standard tag format for main CLI (triggers release.yml workflow)
 git_tag_name = "v{{version}}"
+# Custom release body template - only current version changes
+git_release_body = """{{ changelog }}"""
 
 # Note: shimexe-core is not configured here as it's an internal library
 # that follows the main package version and doesn't need separate releases
