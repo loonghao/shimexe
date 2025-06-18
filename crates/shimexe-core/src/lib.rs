@@ -7,6 +7,7 @@ pub mod archive;
 pub mod config;
 pub mod downloader;
 pub mod error;
+pub mod manager;
 pub mod runner;
 pub mod template;
 pub mod traits;
@@ -23,6 +24,7 @@ pub use config::{
 };
 pub use downloader::Downloader;
 pub use error::{Result, ShimError};
+pub use manager::{ShimBuilder, ShimInfo, ShimManager};
 pub use runner::ShimRunner;
 pub use template::{ArgsConfig, ArgsMode, TemplateEngine};
 pub use traits::{CustomizableShimRunner, ShimConfigLoader, ShimRunnerBuilder, ShimRunnerTrait};
@@ -31,6 +33,7 @@ pub use updater::ShimUpdater;
 /// Re-export commonly used types
 pub mod prelude {
     pub use crate::{
-        ArgsConfig, ArgsMode, Result, ShimConfig, ShimError, ShimRunner, TemplateEngine,
+        ArgsConfig, ArgsMode, Result, ShimBuilder, ShimConfig, ShimError, ShimInfo, ShimManager,
+        ShimRunner, TemplateEngine,
     };
 }

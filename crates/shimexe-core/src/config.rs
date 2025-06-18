@@ -287,6 +287,25 @@ pub enum VersionCheck {
 }
 
 impl ShimConfig {
+    /// Create a new shim configuration with minimal required fields
+    pub fn new(name: impl Into<String>, path: impl Into<String>) -> Self {
+        Self {
+            shim: ShimCore {
+                name: name.into(),
+                path: path.into(),
+                args: Vec::new(),
+                cwd: None,
+                download_url: None,
+                source_type: SourceType::File,
+                extracted_executables: Vec::new(),
+            },
+            args: Default::default(),
+            env: HashMap::new(),
+            metadata: ShimMetadata::default(),
+            auto_update: None,
+        }
+    }
+
     /// Load shim configuration from a TOML file
     pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(&path).map_err(ShimError::Io)?;
