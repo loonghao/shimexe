@@ -21,12 +21,14 @@ dirs.workspace = true
 which.workspace = true
 tracing.workspace = true
 regex = "1.10"
-turbo-cdn = { version = "0.2.0", features = ["rustls-tls"], default-features = false }
+turbo-cdn = { version = "0.2.1", features = ["rustls-tls"], default-features = false }
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 futures-util = "0.3"
 zip = "4.0"
 chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3.0"
+serde_json = "1.0"
 
 [dev-dependencies]
 tempfile.workspace = true
