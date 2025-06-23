@@ -70,10 +70,10 @@ async fn main() -> Result<()> {
     // Parse CLI only if we're running as the main shimexe binary
     let cli = Cli::parse();
 
-    // Initialize logging
-    let log_level = if cli.verbose { "debug" } else { "warn" };
+    // Initialize logging - default to info level, verbose enables debug
+    let log_level = if cli.verbose { "debug" } else { "info" };
     tracing_subscriber::fmt()
-        .with_env_filter(format!("shimexe={}", log_level))
+        .with_env_filter(format!("shimexe={},turbo_cdn={}", log_level, log_level))
         .init();
 
     // Run as main CLI

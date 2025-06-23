@@ -81,6 +81,8 @@ tokio.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+zip = "4.0"
+anyhow = "1.0"
 
 [build-dependencies]
 winres = "0.1"
