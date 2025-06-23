@@ -1,0 +1,42 @@
+$ErrorActionPreference = 'Stop'
+
+$packageName = 'shimexe'
+$toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+$url64 = 'https://github.com/loonghao/shimexe/releases/download/v{{VERSION}}/shimexe-{{VERSION}}-x86_64-pc-windows-msvc.zip'
+$urlArm64 = 'https://github.com/loonghao/shimexe/releases/download/v{{VERSION}}/shimexe-{{VERSION}}-aarch64-pc-windows-msvc.zip'
+
+$packageArgs = @{
+  packageName   = $packageName
+  unzipLocation = $toolsDir
+  url64bit      = $url64
+  urlArm64      = $urlArm64
+  checksum64    = '{{CHECKSUM_X64}}'
+  checksumArm64 = '{{CHECKSUM_ARM64}}'
+  checksumType64= 'sha256'
+  checksumTypeArm64= 'sha256'
+}
+
+# Determine architecture and set appropriate URL and checksum
+if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'ARM64') {
+    $packageArgs.url64bit = $urlArm64
+    $packageArgs.checksum64 = $packageArgs.checksumArm64
+    $packageArgs.Remove('urlArm64')
+    $packageArgs.Remove('checksumArm64')
+    $packageArgs.Remove('checksumTypeArm64')
+}
+
+Install-ChocolateyZipPackage @packageArgs
+
+# Add shimexe to PATH if not already there
+$shimexePath = Join-Path $toolsDir 'shimexe.exe'
+if (Test-Path $shimexePath) {
+    Write-Host "shimexe installed successfully to: $toolsDir" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Quick start:" -ForegroundColor Yellow
+    Write-Host "  shimexe init --examples"
+    Write-Host "  shimexe add mytool --path https://example.com/tool.exe"
+    Write-Host ""
+    Write-Host "For more information, visit: https://github.com/loonghao/shimexe" -ForegroundColor Cyan
+} else {
+    throw "shimexe.exe not found after installation"
+}

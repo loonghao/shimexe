@@ -23,18 +23,28 @@ echo -e "${BLUE}Updating package managers for version ${GREEN}$VERSION${NC}"
 
 # Update Homebrew formula
 echo -e "${YELLOW}Updating Homebrew formula...${NC}"
-sed -i.bak "s/version \".*\"/version \"$VERSION\"/" homebrew/shimexe.rb
-echo -e "${GREEN}✓ Updated homebrew/shimexe.rb${NC}"
+sed -i.bak "s/version \".*\"/version \"$VERSION\"/" @pkg/homebrew/shimexe.rb
+echo -e "${GREEN}✓ Updated @pkg/homebrew/shimexe.rb${NC}"
 
 # Update Scoop manifest
 echo -e "${YELLOW}Updating Scoop manifest...${NC}"
-sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" scoop/shimexe.json
-sed -i.bak "s|/v[0-9.]\+/|/v$VERSION/|g" scoop/shimexe.json
-sed -i.bak "s/shimexe-[0-9.]\+-/shimexe-$VERSION-/g" scoop/shimexe.json
-echo -e "${GREEN}✓ Updated scoop/shimexe.json${NC}"
+sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" @pkg/scoop/shimexe.json
+sed -i.bak "s|/v[0-9.]\+/|/v$VERSION/|g" @pkg/scoop/shimexe.json
+sed -i.bak "s/shimexe-[0-9.]\+-/shimexe-$VERSION-/g" @pkg/scoop/shimexe.json
+echo -e "${GREEN}✓ Updated @pkg/scoop/shimexe.json${NC}"
+
+# Update Chocolatey templates
+echo -e "${YELLOW}Updating Chocolatey templates...${NC}"
+sed -i.bak "s/{{VERSION}}/$VERSION/g" @pkg/chocolatey/shimexe.nuspec.template
+sed -i.bak "s/{{VERSION}}/$VERSION/g" @pkg/chocolatey/tools/chocolateyinstall.ps1.template
+sed -i.bak "s/{{VERSION}}/$VERSION/g" @pkg/chocolatey/tools/chocolateyuninstall.ps1.template
+echo -e "${GREEN}✓ Updated @pkg/chocolatey/ templates${NC}"
 
 # Clean up backup files
-rm -f homebrew/shimexe.rb.bak scoop/shimexe.json.bak
+rm -f @pkg/homebrew/shimexe.rb.bak @pkg/scoop/shimexe.json.bak
+rm -f @pkg/chocolatey/shimexe.nuspec.template.bak
+rm -f @pkg/chocolatey/tools/chocolateyinstall.ps1.template.bak
+rm -f @pkg/chocolatey/tools/chocolateyuninstall.ps1.template.bak
 
 echo -e "${GREEN}✅ All package managers updated to version $VERSION${NC}"
 echo -e "${BLUE}Next steps:${NC}"
