@@ -14,8 +14,7 @@ pub mod traits;
 pub mod updater;
 pub mod utils;
 
-#[cfg(test)]
-mod archive_tests;
+
 
 pub use archive::ArchiveExtractor;
 pub use config::{

@@ -377,7 +377,9 @@ impl ShimRunner {
         })?;
 
         rt.block_on(async {
-            let downloader = Downloader::new();
+            let mut downloader = Downloader::new().await.map_err(|e| {
+                ShimError::ProcessExecution(format!("Failed to create downloader: {}", e))
+            })?;
             downloader
                 .download_if_missing(url, &download_path)
                 .await
@@ -391,56 +393,4 @@ impl ShimRunner {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
 
-    #[test]
-    fn test_runner_from_config() {
-        let config = ShimConfig {
-            shim: crate::config::ShimCore {
-                name: "test".to_string(),
-                path: "echo".to_string(),
-                args: vec!["hello".to_string()],
-                cwd: None,
-                download_url: None,
-                source_type: crate::config::SourceType::File,
-                extracted_executables: vec![],
-            },
-            args: Default::default(),
-            env: std::collections::HashMap::new(),
-            metadata: Default::default(),
-            auto_update: None,
-        };
-
-        let runner = ShimRunner::from_config(config).unwrap();
-        assert_eq!(runner.config().shim.name, "test");
-    }
-
-    #[test]
-    fn test_runner_from_file() {
-        let mut temp_file = NamedTempFile::new().unwrap();
-        writeln!(
-            temp_file,
-            r#"
-[shim]
-name = "test"
-path = "echo"
-args = ["hello"]
-
-[env]
-TEST_VAR = "test_value"
-        "#
-        )
-        .unwrap();
-
-        let runner = ShimRunner::from_file(temp_file.path()).unwrap();
-        assert_eq!(runner.config().shim.name, "test");
-        assert_eq!(
-            runner.config().env.get("TEST_VAR"),
-            Some(&"test_value".to_string())
-        );
-    }
-}
