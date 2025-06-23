@@ -181,3 +181,151 @@ jobs:
         tag_name: ${{ github.ref_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Homebrew Formula Update
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get version from tag
+      id: get_version
+      run: |
+        version="${{ github.ref_name }}"
+        version="${version#v}"
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    - name: Update Homebrew formula
+      uses: mislav/bump-homebrew-formula-action@v3
+      with:
+        formula-name: shimexe
+        formula-path: Formula/shimexe.rb
+        homebrew-tap: loonghao/homebrew-tap
+        download-url: https://github.com/loonghao/shimexe/releases/download/${{ github.ref_name }}/shimexe-${{ steps.get_version.outputs.version }}-x86_64-apple-darwin.tar.xz
+        commit-message: |
+          shimexe ${{ steps.get_version.outputs.version }}
+
+          Created by https://github.com/mislav/bump-homebrew-formula-action
+      env:
+        COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+  # Chocolatey Package Update
+  update-chocolatey:
+    name: Update Chocolatey Package
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        $version = "${{ github.ref_name }}" -replace '^v', ''
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+      shell: powershell
+
+    - name: Setup Chocolatey
+      uses: chocolatey/setup-chocolatey@v1
+      with:
+        chocolatey-license-key: ${{ secrets.CHOCOLATEY_LICENSE_KEY }}
+
+    - name: Create Chocolatey package
+      run: |
+        $version = "${{ steps.get_version.outputs.version }}"
+
+        # Create chocolatey directory structure
+        New-Item -ItemType Directory -Force -Path "chocolatey"
+        New-Item -ItemType Directory -Force -Path "chocolatey/tools"
+
+        # Create nuspec file
+        @"
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+          <metadata>
+            <id>shimexe</id>
+            <version>$version</version>
+            <packageSourceUrl>https://github.com/loonghao/shimexe</packageSourceUrl>
+            <owners>loonghao</owners>
+            <title>shimexe</title>
+            <authors>loonghao</authors>
+            <projectUrl>https://github.com/loonghao/shimexe</projectUrl>
+            <iconUrl>https://raw.githubusercontent.com/loonghao/shimexe/main/assets/icon.png</iconUrl>
+            <copyright>2024 loonghao</copyright>
+            <licenseUrl>https://github.com/loonghao/shimexe/blob/main/LICENSE</licenseUrl>
+            <requireLicenseAcceptance>false</requireLicenseAcceptance>
+            <projectSourceUrl>https://github.com/loonghao/shimexe</projectSourceUrl>
+            <docsUrl>https://github.com/loonghao/shimexe/blob/main/README.md</docsUrl>
+            <bugTrackerUrl>https://github.com/loonghao/shimexe/issues</bugTrackerUrl>
+            <tags>shimexe executable shim manager rust cli tool</tags>
+            <summary>The Modern Executable Shim Manager</summary>
+            <description>shimexe is a revolutionary executable shim manager that bridges the gap between local tools and cloud-distributed applications. Create lightweight, portable shims that can automatically download, extract, and execute tools from HTTP URLs.</description>
+            <releaseNotes>https://github.com/loonghao/shimexe/releases/tag/v$version</releaseNotes>
+          </metadata>
+          <files>
+            <file src="tools\**" target="tools" />
+          </files>
+        </package>
+        "@ | Out-File -FilePath "chocolatey/shimexe.nuspec" -Encoding UTF8
+
+        # Create install script
+        @"
+        `$ErrorActionPreference = 'Stop'
+        `$toolsDir = "`$(Split-Path -parent `$MyInvocation.MyCommand.Definition)"
+        `$url64 = 'https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-$version-x86_64-pc-windows-msvc.zip'
+
+        `$packageArgs = @{
+          packageName   = 'shimexe'
+          unzipLocation = `$toolsDir
+          url64bit      = `$url64
+          checksum64    = ''
+          checksumType64= 'sha256'
+        }
+
+        Install-ChocolateyZipPackage @packageArgs
+        "@ | Out-File -FilePath "chocolatey/tools/chocolateyinstall.ps1" -Encoding UTF8
+
+        # Create uninstall script
+        @"
+        `$ErrorActionPreference = 'Stop'
+        Uninstall-ChocolateyZipPackage 'shimexe' 'shimexe-$version-x86_64-pc-windows-msvc.zip'
+        "@ | Out-File -FilePath "chocolatey/tools/chocolateyuninstall.ps1" -Encoding UTF8
+      shell: powershell
+
+    - name: Pack and publish Chocolatey package
+      uses: chocolatey/chocolatey-action@v1
+      with:
+        args: pack chocolatey/shimexe.nuspec --outputdirectory chocolatey
+      env:
+        CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+    - name: Push to Chocolatey
+      uses: chocolatey/chocolatey-action@v1
+      with:
+        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
+      env:
+        CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+  # Scoop Bucket Update
+  update-scoop:
+    name: Update Scoop Bucket
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get version from tag
+      id: get_version
+      run: |
+        version="${{ github.ref_name }}"
+        version="${version#v}"
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    - name: Update Scoop bucket
+      uses: ScoopInstaller/scoop-bucket-action@v1
+      with:
+        app: shimexe
+        bucket: loonghao/scoop-bucket
+        token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        version: ${{ steps.get_version.outputs.version }}
+        url: https://github.com/loonghao/shimexe/releases/download/${{ github.ref_name }}/shimexe-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-msvc.zip
