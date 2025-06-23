@@ -392,5 +392,3 @@ impl ShimRunner {
         Ok(())
     }
 }
-
-

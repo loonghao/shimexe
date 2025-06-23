@@ -5,7 +5,7 @@ This directory contains all package manager configurations and related files for
 ## 📁 Directory Structure
 
 ```
-@pkg/
+pkg/
 ├── homebrew/           # Homebrew Formula
 │   └── shimexe.rb
 ├── scoop/             # Scoop Manifest
@@ -23,7 +23,7 @@ This directory contains all package manager configurations and related files for
 
 ## 🍺 Homebrew
 
-**Location**: `@pkg/homebrew/shimexe.rb`
+**Location**: `pkg/homebrew/shimexe.rb`
 
 Homebrew formula for macOS and Linux installation. This file is automatically updated by the release workflow and copied to the `loonghao/homebrew-tap` repository.
 
@@ -35,7 +35,7 @@ brew install shimexe
 
 ## 🥄 Scoop
 
-**Location**: `@pkg/scoop/shimexe.json`
+**Location**: `pkg/scoop/shimexe.json`
 
 Scoop manifest for Windows installation. This file is automatically updated by the release workflow and copied to the `loonghao/scoop-bucket` repository.
 
@@ -47,7 +47,7 @@ scoop install shimexe
 
 ## 🍫 Chocolatey
 
-**Location**: `@pkg/chocolatey/`
+**Location**: `pkg/chocolatey/`
 
 Chocolatey package templates that are processed during the release workflow to create the final package.
 
@@ -63,7 +63,7 @@ choco install shimexe
 
 ## 🔧 Scripts
 
-**Location**: `@pkg/scripts/`
+**Location**: `pkg/scripts/`
 
 Utility scripts for managing package configurations:
 
@@ -76,7 +76,7 @@ Utility scripts for managing package configurations:
 ./pkg/scripts/update-package-managers.sh 0.3.6
 
 # Windows
-.\@pkg\scripts\update-package-managers.ps1 0.3.6
+.\pkg\scripts\update-package-managers.ps1 0.3.6
 ```
 
 ## 🚀 Automated Release Process
@@ -117,6 +117,6 @@ These are automatically replaced during the release process.
 ## 📝 Notes
 
 - All templates use placeholder values that are replaced during the release process
-- The `@pkg` directory name uses the `@` prefix to clearly distinguish it as a special directory
+- The `pkg` directory contains all package manager configurations for better organization
 - Package manager configurations are kept separate from the main source code for better organization
 - Scripts support both Unix-style and Windows-style path separators

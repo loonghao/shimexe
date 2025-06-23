@@ -1,18 +1,43 @@
 {
-    "version": "0.3.3",
-    "description": "A modern, cross-platform executable shim manager with HTTP URL download support, dynamic template system, and enhanced argument handling capabilities",
+    "version": "0.3.5",
+    "description": "The Modern Executable Shim Manager - Transform any executable into a smart, portable shim with HTTP download support",
     "homepage": "https://github.com/loonghao/shimexe",
     "license": "MIT",
-    "url": "https://github.com/loonghao/shimexe/releases/download/shimexe-v0.3.3/shimexe-Windows-msvc-x86_64.zip",
-    "hash": "",
-    "extract_dir": "",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/loonghao/shimexe/releases/download/v0.3.5/shimexe-0.3.5-x86_64-pc-windows-msvc.zip",
+            "hash": "PLACEHOLDER_HASH",
+            "extract_dir": "shimexe-0.3.5-x86_64-pc-windows-msvc"
+        },
+        "arm64": {
+            "url": "https://github.com/loonghao/shimexe/releases/download/v0.3.5/shimexe-0.3.5-aarch64-pc-windows-msvc.zip",
+            "hash": "PLACEHOLDER_ARM64_HASH",
+            "extract_dir": "shimexe-0.3.5-aarch64-pc-windows-msvc"
+        }
+    },
     "bin": "shimexe.exe",
     "checkver": {
-        "url": "https://api.github.com/repos/loonghao/shimexe/releases",
-        "jsonpath": "$[?(@.tag_name =~ /^shimexe-v/)].tag_name",
-        "regex": "shimexe-v([\\d.]+)"
+        "github": "https://github.com/loonghao/shimexe"
     },
     "autoupdate": {
-        "url": "https://github.com/loonghao/shimexe/releases/download/shimexe-v$version/shimexe-Windows-msvc-x86_64.zip"
-    }
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-$version-x86_64-pc-windows-msvc.zip",
+                "extract_dir": "shimexe-$version-x86_64-pc-windows-msvc"
+            },
+            "arm64": {
+                "url": "https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-$version-aarch64-pc-windows-msvc.zip",
+                "extract_dir": "shimexe-$version-aarch64-pc-windows-msvc"
+            }
+        }
+    },
+    "notes": [
+        "shimexe has been installed successfully!",
+        "",
+        "Quick start:",
+        "  shimexe init --examples",
+        "  shimexe add mytool --path https://example.com/tool.exe",
+        "",
+        "For more information, visit: https://github.com/loonghao/shimexe"
+    ]
 }
