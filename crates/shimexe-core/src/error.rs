@@ -38,4 +38,7 @@ pub enum ShimError {
 
     #[error("Template processing error: {0}")]
     TemplateError(String),
+
+    #[error("Download error: {0}")]
+    Download(#[from] anyhow::Error),
 }

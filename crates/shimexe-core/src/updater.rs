@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, info, warn};
 
 use crate::config::{AutoUpdate, UpdateProvider, VersionCheck};
+use crate::downloader::Downloader;
 use crate::error::{Result, ShimError};
 use crate::utils::expand_env_vars;
 
@@ -204,14 +205,43 @@ impl ShimUpdater {
     async fn download_and_install(&self, url: &str) -> Result<()> {
         info!("Downloading from: {}", url);
 
-        // TODO: Implement actual download and installation logic
-        // This would involve:
-        // 1. Download the file to a temporary location
-        // 2. Verify checksums if available
-        // 3. Replace the current executable
-        // 4. Set proper permissions
+        // Create a temporary directory for download
+        let temp_dir = tempfile::tempdir().map_err(ShimError::Io)?;
+        let temp_file = temp_dir.path().join("download");
 
-        warn!("Download and install not yet implemented");
+        // Download using turbo-cdn
+        let mut downloader = Downloader::new().await?;
+        downloader.download_file(url, &temp_file).await?;
+
+        // Backup current executable
+        let backup_path = self.executable_path.with_extension("backup");
+        if self.executable_path.exists() {
+            std::fs::copy(&self.executable_path, &backup_path)
+                .map_err(ShimError::Io)?;
+        }
+
+        // Replace the current executable
+        std::fs::copy(&temp_file, &self.executable_path)
+            .map_err(ShimError::Io)?;
+
+        // Set executable permissions on Unix systems
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&self.executable_path)
+                .map_err(ShimError::Io)?
+                .permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&self.executable_path, perms)
+                .map_err(ShimError::Io)?;
+        }
+
+        // Remove backup if everything succeeded
+        if backup_path.exists() {
+            std::fs::remove_file(&backup_path).map_err(ShimError::Io)?;
+        }
+
+        info!("Successfully installed update");
         Ok(())
     }
 
@@ -236,24 +266,99 @@ impl ShimUpdater {
     /// Get latest version from GitHub API
     async fn get_github_latest_version(
         &self,
-        _repo: &str,
-        _include_prerelease: bool,
+        repo: &str,
+        include_prerelease: bool,
     ) -> Result<String> {
-        // TODO: Implement GitHub API call
-        warn!("GitHub version check not yet implemented");
-        Ok("1.0.0".to_string())
+        let api_url = if include_prerelease {
+            format!("https://api.github.com/repos/{}/releases", repo)
+        } else {
+            format!("https://api.github.com/repos/{}/releases/latest", repo)
+        };
+
+        // Create a temporary file for the API response
+        let temp_dir = tempfile::tempdir().map_err(ShimError::Io)?;
+        let temp_file = temp_dir.path().join("github_api_response.json");
+
+        // Download API response using turbo-cdn
+        let mut downloader = Downloader::new().await?;
+        downloader.download_file(&api_url, &temp_file).await?;
+
+        // Read and parse the JSON response
+        let response_content = std::fs::read_to_string(&temp_file)
+            .map_err(ShimError::Io)?;
+
+        if include_prerelease {
+            // Parse array of releases and find the latest
+            let releases: serde_json::Value = serde_json::from_str(&response_content)
+                .map_err(|e| ShimError::Config(format!("Failed to parse GitHub API response: {}", e)))?;
+
+            if let Some(releases_array) = releases.as_array() {
+                if let Some(latest_release) = releases_array.first() {
+                    if let Some(tag_name) = latest_release["tag_name"].as_str() {
+                        return Ok(tag_name.trim_start_matches('v').to_string());
+                    }
+                }
+            }
+            Err(ShimError::Config("No releases found".to_string()))
+        } else {
+            // Parse single latest release
+            let release: serde_json::Value = serde_json::from_str(&response_content)
+                .map_err(|e| ShimError::Config(format!("Failed to parse GitHub API response: {}", e)))?;
+
+            if let Some(tag_name) = release["tag_name"].as_str() {
+                Ok(tag_name.trim_start_matches('v').to_string())
+            } else {
+                Err(ShimError::Config("No tag_name found in release".to_string()))
+            }
+        }
     }
 
     /// Get version from HTTP endpoint
     async fn get_http_version(
         &self,
-        _url: &str,
-        _json_path: Option<&str>,
-        _regex_pattern: Option<&str>,
+        url: &str,
+        json_path: Option<&str>,
+        regex_pattern: Option<&str>,
     ) -> Result<String> {
-        // TODO: Implement HTTP version check
-        warn!("HTTP version check not yet implemented");
-        Ok("1.0.0".to_string())
+        // Create a temporary file for the HTTP response
+        let temp_dir = tempfile::tempdir().map_err(ShimError::Io)?;
+        let temp_file = temp_dir.path().join("http_response");
+
+        // Download response using turbo-cdn
+        let mut downloader = Downloader::new().await?;
+        downloader.download_file(url, &temp_file).await?;
+
+        // Read the response content
+        let response_content = std::fs::read_to_string(&temp_file)
+            .map_err(ShimError::Io)?;
+
+        // Extract version based on the specified method
+        if let Some(json_path) = json_path {
+            // Parse as JSON and extract using JSON path
+            let json_value: serde_json::Value = serde_json::from_str(&response_content)
+                .map_err(|e| ShimError::Config(format!("Failed to parse JSON response: {}", e)))?;
+
+            // Simple JSON path extraction (supports basic dot notation)
+            let version = self.extract_json_value(&json_value, json_path)?;
+            Ok(version)
+        } else if let Some(regex_pattern) = regex_pattern {
+            // Extract using regex pattern
+            let re = regex::Regex::new(regex_pattern)
+                .map_err(|e| ShimError::Config(format!("Invalid regex pattern: {}", e)))?;
+
+            if let Some(captures) = re.captures(&response_content) {
+                if captures.len() > 1 {
+                    Ok(captures[1].to_string())
+                } else {
+                    Ok(captures[0].to_string())
+                }
+            } else {
+                Err(ShimError::Config("Regex pattern did not match".to_string()))
+            }
+        } else {
+            // Try to extract version using default regex
+            self.extract_version_from_output(&response_content)
+        }
     }
 
     /// Get version using semver check
@@ -292,6 +397,32 @@ impl ShimUpdater {
             Err(ShimError::Config(
                 "Could not extract version from output".to_string(),
             ))
+        }
+    }
+
+    /// Extract value from JSON using simple dot notation path
+    fn extract_json_value(&self, json: &serde_json::Value, path: &str) -> Result<String> {
+        let parts: Vec<&str> = path.split('.').collect();
+        let mut current = json;
+
+        for part in parts {
+            if let Some(value) = current.get(part) {
+                current = value;
+            } else {
+                return Err(ShimError::Config(format!(
+                    "JSON path '{}' not found",
+                    path
+                )));
+            }
+        }
+
+        match current {
+            serde_json::Value::String(s) => Ok(s.clone()),
+            serde_json::Value::Number(n) => Ok(n.to_string()),
+            _ => Err(ShimError::Config(format!(
+                "JSON value at path '{}' is not a string or number",
+                path
+            ))),
         }
     }
 
