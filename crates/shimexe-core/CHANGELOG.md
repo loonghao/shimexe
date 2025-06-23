@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.4.0](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.3.5...shimexe-core-v0.4.0) - 2025-06-23
+
+### Added
+
+- enhance auto-update with turbo-cdn integration
+- integrate turbo-cdn and restructure tests
+
+### Fixed
+
+- resolve CI configuration and testing issues
+
+### Other
+
+- rename @pkg to pkg directory and fix code quality
+
 ## [0.3.5](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.3.4...shimexe-core-v0.3.5) - 2025-06-19
 
 ### Other
