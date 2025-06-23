@@ -1,8 +1,8 @@
+use crate::archive::ArchiveExtractor;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
-use turbo_cdn::{TurboCdn, DownloadOptions, Region, Source};
-use crate::archive::ArchiveExtractor;
+use turbo_cdn::{DownloadOptions, Region, Source, TurboCdn};
 
 /// Turbo CDN-based downloader for remote executables
 pub struct Downloader {
@@ -76,7 +76,11 @@ impl Downloader {
 
     /// Download a file from URL to the specified path using turbo-cdn
     pub async fn download_file(&mut self, url: &str, target_path: &Path) -> Result<()> {
-        info!("Downloading {} to {} using turbo-cdn", url, target_path.display());
+        info!(
+            "Downloading {} to {} using turbo-cdn",
+            url,
+            target_path.display()
+        );
 
         // Create parent directories if they don't exist
         if let Some(parent) = target_path.parent() {
@@ -94,19 +98,21 @@ impl Downloader {
             .build();
 
         // Use turbo-cdn to download from URL with automatic optimization
-        let result = self.client
+        let result = self
+            .client
             .download_from_url(url, Some(options))
             .await
             .with_context(|| format!("Failed to download from URL: {}", url))?;
 
         // Move the downloaded file to the target path if needed
         if result.path != target_path {
-            std::fs::rename(&result.path, target_path)
-                .with_context(|| format!(
+            std::fs::rename(&result.path, target_path).with_context(|| {
+                format!(
                     "Failed to move downloaded file from {} to {}",
                     result.path.display(),
                     target_path.display()
-                ))?;
+                )
+            })?;
         }
 
         info!(
@@ -253,4 +259,3 @@ impl Default for Downloader {
         panic!("Downloader::default() cannot be used. Use Downloader::new().await instead")
     }
 }
-

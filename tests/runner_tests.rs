@@ -1,4 +1,4 @@
-use shimexe_core::{ShimRunner, ShimConfig, ShimCore, SourceType};
+use shimexe_core::{ShimConfig, ShimCore, ShimRunner, SourceType};
 use std::collections::HashMap;
 use std::io::Write;
 use tempfile::NamedTempFile;

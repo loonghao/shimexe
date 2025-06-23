@@ -59,10 +59,10 @@ fn test_generate_download_path() {
     let base_dir = Path::new("/tmp");
     let app_name = "myapp";
     let filename = "myapp.exe";
-    
+
     let expected = PathBuf::from("/tmp/myapp/bin/myapp.exe");
     let actual = Downloader::generate_download_path(base_dir, app_name, filename);
-    
+
     assert_eq!(actual, expected);
 }
 
@@ -70,13 +70,13 @@ fn test_generate_download_path() {
 async fn test_file_exists() {
     let temp_dir = tempdir().unwrap();
     let file_path = temp_dir.path().join("test_file.txt");
-    
+
     // File doesn't exist yet
     assert!(!Downloader::file_exists(&file_path));
-    
+
     // Create the file
     std::fs::write(&file_path, "test content").unwrap();
-    
+
     // File should exist now
     assert!(Downloader::file_exists(&file_path));
 }

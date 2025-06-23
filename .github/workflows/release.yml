@@ -240,19 +240,19 @@ jobs:
         New-Item -ItemType Directory -Force -Path "chocolatey/tools"
 
         # Copy and process nuspec template
-        $nuspecContent = Get-Content "@pkg/chocolatey/shimexe.nuspec.template" -Raw
+        $nuspecContent = Get-Content "pkg/chocolatey/shimexe.nuspec.template" -Raw
         $nuspecContent = $nuspecContent -replace '{{VERSION}}', $version
         $nuspecContent | Out-File -FilePath "chocolatey/shimexe.nuspec" -Encoding UTF8
 
         # Copy and process install script template
-        $installContent = Get-Content "@pkg/chocolatey/tools/chocolateyinstall.ps1.template" -Raw
+        $installContent = Get-Content "pkg/chocolatey/tools/chocolateyinstall.ps1.template" -Raw
         $installContent = $installContent -replace '{{VERSION}}', $version
         $installContent = $installContent -replace '{{CHECKSUM_X64}}', 'PLACEHOLDER_X64'
         $installContent = $installContent -replace '{{CHECKSUM_ARM64}}', 'PLACEHOLDER_ARM64'
         $installContent | Out-File -FilePath "chocolatey/tools/chocolateyinstall.ps1" -Encoding UTF8
 
         # Copy and process uninstall script template
-        $uninstallContent = Get-Content "@pkg/chocolatey/tools/chocolateyuninstall.ps1.template" -Raw
+        $uninstallContent = Get-Content "pkg/chocolatey/tools/chocolateyuninstall.ps1.template" -Raw
         $uninstallContent = $uninstallContent -replace '{{VERSION}}', $version
         $uninstallContent | Out-File -FilePath "chocolatey/tools/chocolateyuninstall.ps1" -Encoding UTF8
       shell: powershell

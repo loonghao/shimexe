@@ -14,8 +14,6 @@ pub mod traits;
 pub mod updater;
 pub mod utils;
 
-
-
 pub use archive::ArchiveExtractor;
 pub use config::{
     AutoUpdate, ExtractedExecutable, ShimConfig, ShimCore, ShimMetadata, SourceType,
