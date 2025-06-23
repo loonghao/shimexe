@@ -8,12 +8,33 @@
 
 *将任何可执行文件转换为智能、便携的 shim，支持 HTTP 下载*
 
+<!-- 构建与质量 -->
 [![CI](https://github.com/loonghao/shimexe/workflows/CI/badge.svg)](https://github.com/loonghao/shimexe/actions)
-[![Crates.io](https://img.shields.io/crates/v/shimexe.svg)](https://crates.io/crates/shimexe)
+[![Release](https://github.com/loonghao/shimexe/workflows/Release/badge.svg)](https://github.com/loonghao/shimexe/actions)
+[![codecov](https://codecov.io/gh/loonghao/shimexe/branch/main/graph/badge.svg)](https://codecov.io/gh/loonghao/shimexe)
+[![Security audit](https://github.com/loonghao/shimexe/workflows/Security%20audit/badge.svg)](https://github.com/loonghao/shimexe/actions)
+
+<!-- 包版本 -->
+[![Crates.io](https://img.shields.io/crates/v/shimexe.svg?logo=rust&logoColor=white)](https://crates.io/crates/shimexe)
+[![Homebrew](https://img.shields.io/homebrew/v/shimexe?logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/shimexe)
+[![Chocolatey](https://img.shields.io/chocolatey/v/shimexe?logo=chocolatey&logoColor=white)](https://chocolatey.org/packages/shimexe)
+[![Scoop](https://img.shields.io/scoop/v/shimexe?logo=windows&logoColor=white)](https://scoop.sh/#/apps?q=shimexe)
+
+<!-- 下载量与使用情况 -->
+[![Crates.io Downloads](https://img.shields.io/crates/d/shimexe.svg?logo=rust&logoColor=white&label=cargo%20安装量)](https://crates.io/crates/shimexe)
+[![GitHub Downloads](https://img.shields.io/github/downloads/loonghao/shimexe/total?logo=github&logoColor=white&label=github%20下载量)](https://github.com/loonghao/shimexe/releases)
+[![Homebrew Downloads](https://img.shields.io/homebrew/installs/dm/shimexe?logo=homebrew&logoColor=white&label=brew%20安装量)](https://formulae.brew.sh/formula/shimexe)
+[![Chocolatey Downloads](https://img.shields.io/chocolatey/dt/shimexe?logo=chocolatey&logoColor=white&label=choco%20安装量)](https://chocolatey.org/packages/shimexe)
+
+<!-- 文档与社区 -->
 [![Documentation](https://docs.rs/shimexe/badge.svg)](https://docs.rs/shimexe)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/loonghao/shimexe#license)
-[![Downloads](https://img.shields.io/crates/d/shimexe.svg)](https://crates.io/crates/shimexe)
 [![GitHub Stars](https://img.shields.io/github/stars/loonghao/shimexe?style=social)](https://github.com/loonghao/shimexe)
+[![GitHub Forks](https://img.shields.io/github/forks/loonghao/shimexe?style=social)](https://github.com/loonghao/shimexe/fork)
+
+<!-- 平台支持 -->
+[![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?logo=rust&logoColor=white)](https://github.com/loonghao/shimexe/releases)
+[![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
 [📖 English Documentation](README.md) • [🚀 快速开始](#快速开始) • [📦 安装](#安装) • [🔧 示例](#示例)
 
@@ -113,7 +134,7 @@ $env:SHIMEXE_VERSION="0.3.1"; irm https://raw.githubusercontent.com/loonghao/shi
 
 <table>
 <tr>
-<td width="33%">
+<td width="25%">
 
 **🦀 Cargo**
 ```bash
@@ -121,7 +142,19 @@ cargo install shimexe
 ```
 
 </td>
-<td width="33%">
+<td width="25%">
+
+**🍺 Homebrew**
+```bash
+# 首先添加 tap
+brew tap loonghao/tap
+
+# 安装 shimexe
+brew install shimexe
+```
+
+</td>
+<td width="25%">
 
 **🍫 Chocolatey**
 ```powershell
@@ -129,10 +162,14 @@ choco install shimexe
 ```
 
 </td>
-<td width="33%">
+<td width="25%">
 
 **🥄 Scoop**
 ```powershell
+# 首先添加 bucket
+scoop bucket add loonghao https://github.com/loonghao/scoop-bucket
+
+# 安装 shimexe
 scoop install shimexe
 ```
 
