@@ -1,0 +1,30 @@
+$ErrorActionPreference = 'Stop'
+
+$packageName = 'shimexe'
+$toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+
+# Remove shimexe executable
+$shimexePath = Join-Path $toolsDir 'shimexe.exe'
+if (Test-Path $shimexePath) {
+    Remove-Item $shimexePath -Force
+    Write-Host "shimexe executable removed successfully" -ForegroundColor Green
+}
+
+# Clean up any remaining files
+$filesToRemove = @(
+    'shimexe.exe',
+    'LICENSE',
+    'README.md'
+)
+
+foreach ($file in $filesToRemove) {
+    $filePath = Join-Path $toolsDir $file
+    if (Test-Path $filePath) {
+        Remove-Item $filePath -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Write-Host "shimexe has been uninstalled successfully" -ForegroundColor Green
+Write-Host ""
+Write-Host "Note: Your shimexe configuration and shims in ~/.shimexe are preserved." -ForegroundColor Yellow
+Write-Host "To completely remove shimexe data, manually delete the ~/.shimexe directory." -ForegroundColor Yellow

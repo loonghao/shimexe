@@ -256,6 +256,8 @@ $env:PATH = "$env:USERPROFILE\.shimexe;$env:PATH"
 
 ### **Get Started in 30 Seconds!**
 
+*Now available on all major package managers!*
+
 </div>
 
 <table>

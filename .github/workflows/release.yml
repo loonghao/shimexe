@@ -239,58 +239,22 @@ jobs:
         New-Item -ItemType Directory -Force -Path "chocolatey"
         New-Item -ItemType Directory -Force -Path "chocolatey/tools"
 
-        # Create nuspec file
-        @"
-        <?xml version="1.0" encoding="utf-8"?>
-        <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
-          <metadata>
-            <id>shimexe</id>
-            <version>$version</version>
-            <packageSourceUrl>https://github.com/loonghao/shimexe</packageSourceUrl>
-            <owners>loonghao</owners>
-            <title>shimexe</title>
-            <authors>loonghao</authors>
-            <projectUrl>https://github.com/loonghao/shimexe</projectUrl>
-            <iconUrl>https://raw.githubusercontent.com/loonghao/shimexe/main/assets/icon.png</iconUrl>
-            <copyright>2024 loonghao</copyright>
-            <licenseUrl>https://github.com/loonghao/shimexe/blob/main/LICENSE</licenseUrl>
-            <requireLicenseAcceptance>false</requireLicenseAcceptance>
-            <projectSourceUrl>https://github.com/loonghao/shimexe</projectSourceUrl>
-            <docsUrl>https://github.com/loonghao/shimexe/blob/main/README.md</docsUrl>
-            <bugTrackerUrl>https://github.com/loonghao/shimexe/issues</bugTrackerUrl>
-            <tags>shimexe executable shim manager rust cli tool</tags>
-            <summary>The Modern Executable Shim Manager</summary>
-            <description>shimexe is a revolutionary executable shim manager that bridges the gap between local tools and cloud-distributed applications. Create lightweight, portable shims that can automatically download, extract, and execute tools from HTTP URLs.</description>
-            <releaseNotes>https://github.com/loonghao/shimexe/releases/tag/v$version</releaseNotes>
-          </metadata>
-          <files>
-            <file src="tools\**" target="tools" />
-          </files>
-        </package>
-        "@ | Out-File -FilePath "chocolatey/shimexe.nuspec" -Encoding UTF8
+        # Copy and process nuspec template
+        $nuspecContent = Get-Content "@pkg/chocolatey/shimexe.nuspec.template" -Raw
+        $nuspecContent = $nuspecContent -replace '{{VERSION}}', $version
+        $nuspecContent | Out-File -FilePath "chocolatey/shimexe.nuspec" -Encoding UTF8
 
-        # Create install script
-        @"
-        `$ErrorActionPreference = 'Stop'
-        `$toolsDir = "`$(Split-Path -parent `$MyInvocation.MyCommand.Definition)"
-        `$url64 = 'https://github.com/loonghao/shimexe/releases/download/v$version/shimexe-$version-x86_64-pc-windows-msvc.zip'
+        # Copy and process install script template
+        $installContent = Get-Content "@pkg/chocolatey/tools/chocolateyinstall.ps1.template" -Raw
+        $installContent = $installContent -replace '{{VERSION}}', $version
+        $installContent = $installContent -replace '{{CHECKSUM_X64}}', 'PLACEHOLDER_X64'
+        $installContent = $installContent -replace '{{CHECKSUM_ARM64}}', 'PLACEHOLDER_ARM64'
+        $installContent | Out-File -FilePath "chocolatey/tools/chocolateyinstall.ps1" -Encoding UTF8
 
-        `$packageArgs = @{
-          packageName   = 'shimexe'
-          unzipLocation = `$toolsDir
-          url64bit      = `$url64
-          checksum64    = ''
-          checksumType64= 'sha256'
-        }
-
-        Install-ChocolateyZipPackage @packageArgs
-        "@ | Out-File -FilePath "chocolatey/tools/chocolateyinstall.ps1" -Encoding UTF8
-
-        # Create uninstall script
-        @"
-        `$ErrorActionPreference = 'Stop'
-        Uninstall-ChocolateyZipPackage 'shimexe' 'shimexe-$version-x86_64-pc-windows-msvc.zip'
-        "@ | Out-File -FilePath "chocolatey/tools/chocolateyuninstall.ps1" -Encoding UTF8
+        # Copy and process uninstall script template
+        $uninstallContent = Get-Content "@pkg/chocolatey/tools/chocolateyuninstall.ps1.template" -Raw
+        $uninstallContent = $uninstallContent -replace '{{VERSION}}', $version
+        $uninstallContent | Out-File -FilePath "chocolatey/tools/chocolateyuninstall.ps1" -Encoding UTF8
       shell: powershell
 
     - name: Pack and publish Chocolatey package

@@ -87,13 +87,13 @@ Use the provided scripts to update all package managers at once:
 
 ### Unix/Linux/macOS
 ```bash
-chmod +x scripts/update-package-managers.sh
-./scripts/update-package-managers.sh 0.3.6
+chmod +x @pkg/scripts/update-package-managers.sh
+./@pkg/scripts/update-package-managers.sh 0.3.6
 ```
 
 ### Windows
 ```powershell
-.\scripts\update-package-managers.ps1 0.3.6
+.\@pkg\scripts\update-package-managers.ps1 0.3.6
 ```
 
 ## 📊 Download Statistics

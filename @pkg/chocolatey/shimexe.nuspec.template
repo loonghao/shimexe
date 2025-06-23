@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>shimexe</id>
+    <version>{{VERSION}}</version>
+    <packageSourceUrl>https://github.com/loonghao/shimexe</packageSourceUrl>
+    <owners>loonghao</owners>
+    <title>shimexe - The Modern Executable Shim Manager</title>
+    <authors>loonghao</authors>
+    <projectUrl>https://github.com/loonghao/shimexe</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/loonghao/shimexe/main/assets/icon.png</iconUrl>
+    <copyright>2024 loonghao</copyright>
+    <licenseUrl>https://github.com/loonghao/shimexe/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/loonghao/shimexe</projectSourceUrl>
+    <docsUrl>https://github.com/loonghao/shimexe/blob/main/README.md</docsUrl>
+    <bugTrackerUrl>https://github.com/loonghao/shimexe/issues</bugTrackerUrl>
+    <tags>shimexe executable shim manager rust cli tool portable download http</tags>
+    <summary>The Modern Executable Shim Manager - Transform any executable into a smart, portable shim</summary>
+    <description><![CDATA[
+# shimexe - The Modern Executable Shim Manager
+
+**shimexe** is a revolutionary executable shim manager that bridges the gap between local tools and cloud-distributed applications. Create lightweight, portable shims that can automatically download, extract, and execute tools from HTTP URLs - while maintaining the simplicity of local executables.
+
+## Key Features
+
+- **🌐 Cloud-Native**: Download tools directly from GitHub releases, CDNs, or any HTTP URL
+- **📦 Smart Archives**: Automatically extract zip files and discover executables
+- **🔧 Zero Config**: Smart defaults with powerful customization options
+- **🚀 Portable**: Shims work independently without requiring shimexe installation
+- **⚡ Fast**: Efficient caching and smart re-download logic
+- **🔒 Secure**: Built with Rust and rustls-tls for secure HTTPS connections
+
+## Quick Start
+
+```bash
+# Add a tool from GitHub releases
+shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip --add-system-path
+
+# Use it directly
+uv --version
+
+# Or through shimexe run
+shimexe run uv --version
+```
+
+## Installation Methods
+
+- **Chocolatey**: `choco install shimexe`
+- **Scoop**: `scoop bucket add loonghao && scoop install shimexe`
+- **Cargo**: `cargo install shimexe`
+- **Direct Download**: Download from GitHub releases
+
+For more information, visit: https://github.com/loonghao/shimexe
+    ]]></description>
+    <releaseNotes>https://github.com/loonghao/shimexe/releases/tag/v{{VERSION}}</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
