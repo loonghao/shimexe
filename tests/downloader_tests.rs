@@ -66,8 +66,8 @@ fn test_generate_download_path() {
     assert_eq!(actual, expected);
 }
 
-#[tokio::test]
-async fn test_file_exists() {
+#[test]
+fn test_file_exists() {
     let temp_dir = tempdir().unwrap();
     let file_path = temp_dir.path().join("test_file.txt");
 

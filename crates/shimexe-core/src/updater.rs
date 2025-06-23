@@ -216,13 +216,11 @@ impl ShimUpdater {
         // Backup current executable
         let backup_path = self.executable_path.with_extension("backup");
         if self.executable_path.exists() {
-            std::fs::copy(&self.executable_path, &backup_path)
-                .map_err(ShimError::Io)?;
+            std::fs::copy(&self.executable_path, &backup_path).map_err(ShimError::Io)?;
         }
 
         // Replace the current executable
-        std::fs::copy(&temp_file, &self.executable_path)
-            .map_err(ShimError::Io)?;
+        std::fs::copy(&temp_file, &self.executable_path).map_err(ShimError::Io)?;
 
         // Set executable permissions on Unix systems
         #[cfg(unix)]
@@ -232,8 +230,7 @@ impl ShimUpdater {
                 .map_err(ShimError::Io)?
                 .permissions();
             perms.set_mode(0o755);
-            std::fs::set_permissions(&self.executable_path, perms)
-                .map_err(ShimError::Io)?;
+            std::fs::set_permissions(&self.executable_path, perms).map_err(ShimError::Io)?;
         }
 
         // Remove backup if everything succeeded
@@ -284,13 +281,14 @@ impl ShimUpdater {
         downloader.download_file(&api_url, &temp_file).await?;
 
         // Read and parse the JSON response
-        let response_content = std::fs::read_to_string(&temp_file)
-            .map_err(ShimError::Io)?;
+        let response_content = std::fs::read_to_string(&temp_file).map_err(ShimError::Io)?;
 
         if include_prerelease {
             // Parse array of releases and find the latest
-            let releases: serde_json::Value = serde_json::from_str(&response_content)
-                .map_err(|e| ShimError::Config(format!("Failed to parse GitHub API response: {}", e)))?;
+            let releases: serde_json::Value =
+                serde_json::from_str(&response_content).map_err(|e| {
+                    ShimError::Config(format!("Failed to parse GitHub API response: {}", e))
+                })?;
 
             if let Some(releases_array) = releases.as_array() {
                 if let Some(latest_release) = releases_array.first() {
@@ -302,13 +300,17 @@ impl ShimUpdater {
             Err(ShimError::Config("No releases found".to_string()))
         } else {
             // Parse single latest release
-            let release: serde_json::Value = serde_json::from_str(&response_content)
-                .map_err(|e| ShimError::Config(format!("Failed to parse GitHub API response: {}", e)))?;
+            let release: serde_json::Value =
+                serde_json::from_str(&response_content).map_err(|e| {
+                    ShimError::Config(format!("Failed to parse GitHub API response: {}", e))
+                })?;
 
             if let Some(tag_name) = release["tag_name"].as_str() {
                 Ok(tag_name.trim_start_matches('v').to_string())
             } else {
-                Err(ShimError::Config("No tag_name found in release".to_string()))
+                Err(ShimError::Config(
+                    "No tag_name found in release".to_string(),
+                ))
             }
         }
     }
@@ -329,8 +331,7 @@ impl ShimUpdater {
         downloader.download_file(url, &temp_file).await?;
 
         // Read the response content
-        let response_content = std::fs::read_to_string(&temp_file)
-            .map_err(ShimError::Io)?;
+        let response_content = std::fs::read_to_string(&temp_file).map_err(ShimError::Io)?;
 
         // Extract version based on the specified method
         if let Some(json_path) = json_path {
@@ -409,10 +410,7 @@ impl ShimUpdater {
             if let Some(value) = current.get(part) {
                 current = value;
             } else {
-                return Err(ShimError::Config(format!(
-                    "JSON path '{}' not found",
-                    path
-                )));
+                return Err(ShimError::Config(format!("JSON path '{}' not found", path)));
             }
         }
 
