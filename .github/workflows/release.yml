@@ -1,295 +1,73 @@
 name: Release
 
-# This workflow handles binary releases and distribution
-# - Triggered by tag pushes (v*) or release events
-# - Builds cross-platform binaries and uploads to GitHub releases
-# - Uses houseabsolute/actions-rust-release for simplified release management
-#
-# Note: Crates.io publishing is handled by release-plz.yml workflow
-
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - "v*"
 
+# We need this to be able to create releases.
 permissions:
   contents: write
-  actions: read
-  id-token: write
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: -D warnings
 
 jobs:
-  release:
-    name: Release - ${{ matrix.platform.os_name }}
+  upload-assets:
+    name: Upload release assets
+    # Only run if this is a turbo-cdn release (not other packages in workspace)
+    if: startsWith(github.ref_name, 'v')
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        platform:
-          # Linux platforms
-          - os_name: Linux-x86_64
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-
-          - os_name: Linux-x86_64-musl
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-
-          - os_name: Linux-aarch64
-            os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-
-          - os_name: Linux-aarch64-musl
-            os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-
-          # Windows platforms
-          - os_name: Windows-x86_64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-
-          - os_name: Windows-aarch64
-            os: windows-latest
-            target: aarch64-pc-windows-msvc
-
-          # macOS platforms
-          - os_name: macOS-x86_64
-            os: macos-latest
-            target: x86_64-apple-darwin
-
-          - os_name: macOS-aarch64
-            os: macos-latest
-            target: aarch64-apple-darwin
-
-          # FreeBSD platform (cross-compiled from Linux)
-          - os_name: FreeBSD-x86_64
-            os: ubuntu-latest
-            target: x86_64-unknown-freebsd
-
-    runs-on: ${{ matrix.platform.os }}
+        include:
+          # Linux targets
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-22.04
+          # macOS targets
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-13
+          # Windows targets
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+          - target: aarch64-pc-windows-msvc
+            os: windows-2022
+    timeout-minutes: 60
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Cache ImageMagick installation to speed up builds
-      - name: Cache ImageMagick (Linux)
-        if: runner.os == 'Linux'
-        uses: actions/cache@v4
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
-          path: /usr/bin/convert
-          key: imagemagick-linux-${{ runner.os }}-${{ matrix.platform.target }}
+          target: ${{ matrix.target }}
+        if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
-      - name: Cache ImageMagick (macOS)
-        if: runner.os == 'macOS'
-        uses: actions/cache@v4
+      - uses: taiki-e/install-action@v2
         with:
-          path: /opt/homebrew/bin/convert
-          key: imagemagick-macos-${{ runner.os }}-${{ matrix.platform.target }}
+          tool: cross
+        if: contains(matrix.target, '-musl')
 
-      - name: Cache Chocolatey packages (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
+      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+        if: endsWith(matrix.target, 'windows-msvc')
+
+      - uses: taiki-e/upload-rust-binary-action@v1
         with:
-          path: C:\ProgramData\chocolatey\lib\imagemagick
-          key: chocolatey-imagemagick-${{ runner.os }}
+          bin: shimexe
+          target: ${{ matrix.target }}
+          tar: all
+          zip: windows
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            if [ ! -f "/usr/bin/convert" ]; then
-              sudo apt-get update
-              sudo apt-get install -y imagemagick
-            else
-              echo "ImageMagick already installed (cached)"
-            fi
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            if [ ! -f "/opt/homebrew/bin/convert" ]; then
-              brew install imagemagick
-            else
-              echo "ImageMagick already installed (cached)"
-            fi
-          fi
-        shell: bash
-
-      - name: Install ImageMagick (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          if (!(Test-Path "C:\ProgramData\chocolatey\lib\imagemagick")) {
-            choco install imagemagick -y
-          } else {
-            Write-Host "ImageMagick already installed (cached)"
-          }
-        shell: powershell
-
-      - name: Build executable
-        uses: houseabsolute/actions-rust-cross@v1
-        with:
-          command: build
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --bin shimexe"
-          strip: true
-
-      - name: Publish artifacts and release
-        uses: houseabsolute/actions-rust-release@v0
-        with:
-          executable-name: shimexe
-          target: ${{ matrix.platform.target }}
-          changes-file: CHANGELOG.md
-          extra-files: |
-            README.md
-            README_zh.md
-            LICENSE
-            scripts/install.sh
-            scripts/install.ps1
-
-
-
-
-
-  publish-install-scripts:
-    name: Publish Install Scripts
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Get version from tag
-      id: get_version
-      run: |
-        version="${{ github.ref_name }}"
-        version="${version#v}"
-        echo "version=$version" >> $GITHUB_OUTPUT
-
-    - name: Update install scripts with version
-      run: |
-        version="${{ steps.get_version.outputs.version }}"
-
-        # Update install.sh with correct version
-        sed -i "s/SHIMEXE_VERSION=\"latest\"/SHIMEXE_VERSION=\"$version\"/" scripts/install.sh
-
-        # Update install.ps1 with correct version
-        sed -i "s/\$Version = \"latest\"/\$Version = \"$version\"/" scripts/install.ps1
-
-    - name: Upload install scripts to release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          scripts/install.sh
-          scripts/install.ps1
-        tag_name: ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Homebrew Formula Update
-  update-homebrew:
-    name: Update Homebrew Formula
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-    - name: Get version from tag
-      id: get_version
-      run: |
-        version="${{ github.ref_name }}"
-        version="${version#v}"
-        echo "version=$version" >> $GITHUB_OUTPUT
-
-    - name: Update Homebrew formula
-      uses: mislav/bump-homebrew-formula-action@v3
-      with:
-        formula-name: shimexe
-        formula-path: Formula/shimexe.rb
-        homebrew-tap: loonghao/homebrew-tap
-        download-url: https://github.com/loonghao/shimexe/releases/download/${{ github.ref_name }}/shimexe-${{ steps.get_version.outputs.version }}-x86_64-apple-darwin.tar.xz
-        commit-message: |
-          shimexe ${{ steps.get_version.outputs.version }}
-
-          Created by https://github.com/mislav/bump-homebrew-formula-action
-      env:
-        COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-  # Chocolatey Package Update
-  update-chocolatey:
-    name: Update Chocolatey Package
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Get version from tag
-      id: get_version
-      run: |
-        $version = "${{ github.ref_name }}" -replace '^v', ''
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-      shell: powershell
-
-    - name: Setup Chocolatey
-      uses: chocolatey/setup-chocolatey@v1
-      with:
-        chocolatey-license-key: ${{ secrets.CHOCOLATEY_LICENSE_KEY }}
-
-    - name: Create Chocolatey package
-      run: |
-        $version = "${{ steps.get_version.outputs.version }}"
-
-        # Create chocolatey directory structure
-        New-Item -ItemType Directory -Force -Path "chocolatey"
-        New-Item -ItemType Directory -Force -Path "chocolatey/tools"
-
-        # Copy and process nuspec template
-        $nuspecContent = Get-Content "pkg/chocolatey/shimexe.nuspec.template" -Raw
-        $nuspecContent = $nuspecContent -replace '{{VERSION}}', $version
-        $nuspecContent | Out-File -FilePath "chocolatey/shimexe.nuspec" -Encoding UTF8
-
-        # Copy and process install script template
-        $installContent = Get-Content "pkg/chocolatey/tools/chocolateyinstall.ps1.template" -Raw
-        $installContent = $installContent -replace '{{VERSION}}', $version
-        $installContent = $installContent -replace '{{CHECKSUM_X64}}', 'PLACEHOLDER_X64'
-        $installContent = $installContent -replace '{{CHECKSUM_ARM64}}', 'PLACEHOLDER_ARM64'
-        $installContent | Out-File -FilePath "chocolatey/tools/chocolateyinstall.ps1" -Encoding UTF8
-
-        # Copy and process uninstall script template
-        $uninstallContent = Get-Content "pkg/chocolatey/tools/chocolateyuninstall.ps1.template" -Raw
-        $uninstallContent = $uninstallContent -replace '{{VERSION}}', $version
-        $uninstallContent | Out-File -FilePath "chocolatey/tools/chocolateyuninstall.ps1" -Encoding UTF8
-      shell: powershell
-
-    - name: Pack and publish Chocolatey package
-      uses: chocolatey/chocolatey-action@v1
-      with:
-        args: pack chocolatey/shimexe.nuspec --outputdirectory chocolatey
-      env:
-        CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-
-    - name: Push to Chocolatey
-      uses: chocolatey/chocolatey-action@v1
-      with:
-        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
-      env:
-        CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-
-  # Scoop Bucket Update
-  update-scoop:
-    name: Update Scoop Bucket
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-    - name: Get version from tag
-      id: get_version
-      run: |
-        version="${{ github.ref_name }}"
-        version="${version#v}"
-        echo "version=$version" >> $GITHUB_OUTPUT
-
-    - name: Update Scoop bucket
-      uses: ScoopInstaller/scoop-bucket-action@v1
-      with:
-        app: shimexe
-        bucket: loonghao/scoop-bucket
-        token: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-        version: ${{ steps.get_version.outputs.version }}
-        url: https://github.com/loonghao/shimexe/releases/download/${{ github.ref_name }}/shimexe-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-msvc.zip

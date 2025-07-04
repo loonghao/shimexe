@@ -10,10 +10,11 @@ on:
       - main
 
 jobs:
-  # Release unpublished packages.
+  # Release unpublished packages to crates.io
   release-plz-release:
     name: Release-plz release
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'loonghao' }}
     permissions:
       contents: write
     steps:
@@ -24,9 +25,7 @@ jobs:
           # Use PAT to allow triggering other workflows (like release.yml)
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
-
-
-      - name: Install Rust toolchain
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run release-plz
@@ -38,10 +37,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  # Create a PR with the new versions and changelog, preparing the next release.
+  # Create a PR with the new versions and changelog, preparing the next release
   release-plz-pr:
     name: Release-plz PR
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'loonghao' }}
     permissions:
       contents: write
       pull-requests: write
@@ -56,9 +56,7 @@ jobs:
           # Use PAT to allow triggering CI workflows on the release PR
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
-
-
-      - name: Install Rust toolchain
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run release-plz
@@ -69,3 +67,4 @@ jobs:
           # Use PAT to allow triggering CI workflows on the release PR, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+

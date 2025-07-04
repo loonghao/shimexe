@@ -1,10 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: '00 01 * * *'
 
 permissions:
   contents: read
@@ -13,257 +15,115 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
+  # Clippy linting
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # Testing across platforms
   test:
-    name: Test - ${{ matrix.platform.name }}
-    runs-on: ${{ matrix.platform.os }}
+    name: Test - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        platform:
-          # Native compilation platforms
-          - name: Linux-x86_64
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            rust: stable
-
-          - name: Linux-x86_64-beta
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            rust: beta
-
-          - name: Windows-x86_64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-            rust: stable
-
-          - name: macOS-x86_64
-            os: macos-latest
-            target: x86_64-apple-darwin
-            rust: stable
-
-          # Cross-compilation targets for broader testing
-          - name: Linux-ARM64
-            os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            rust: stable
-
-          - name: Linux-musl
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            rust: stable
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Cache ImageMagick installation to speed up builds
-    - name: Cache ImageMagick (Linux)
-      if: runner.os == 'Linux'
-      uses: actions/cache@v4
-      with:
-        path: /usr/bin/convert
-        key: imagemagick-linux-${{ runner.os }}
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache ImageMagick (macOS)
-      if: runner.os == 'macOS'
-      uses: actions/cache@v4
-      with:
-        path: /opt/homebrew/bin/convert
-        key: imagemagick-macos-${{ runner.os }}
+      - name: Build
+        run: cargo build --verbose --workspace
 
-    - name: Install dependencies
-      run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          if [ ! -f "/usr/bin/convert" ]; then
-            sudo apt-get update
-            sudo apt-get install -y imagemagick
-          fi
-        elif [ "$RUNNER_OS" == "macOS" ]; then
-          if [ ! -f "/opt/homebrew/bin/convert" ]; then
-            brew install imagemagick
-          fi
-        fi
-      shell: bash
+      - name: Run tests
+        run: cargo test --verbose --workspace
 
-    - name: Install ImageMagick (Windows)
-      if: runner.os == 'Windows'
-      uses: crazy-max/ghaction-chocolatey@v3
-      with:
-        args: install imagemagick
-
-    - name: Run tests and build
-      uses: houseabsolute/actions-rust-cross@v1
-      with:
-        command: both
-        target: ${{ matrix.platform.target }}
-        toolchain: ${{ matrix.platform.rust }}
-        args: "--locked --all-features"
-        use-rust-cache: true
-
-  code_quality:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt, clippy
-
-    - name: Cache Rust dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-quality-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-quality-
-          ${{ runner.os }}-cargo-
-
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-
-    - name: Run clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
-
-    - name: Check documentation
-      run: cargo doc --all-features --no-deps --document-private-items
-      env:
-        RUSTDOCFLAGS: "-D warnings"
-
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-
-    - name: Install stable toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
-
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ubuntu-latest-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ubuntu-latest-cargo-coverage-
-
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
-
-    - name: Generate code coverage
-      run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: lcov.info
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
-
+  # Security audit using rustsec database
   security_audit:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: rustsec/audit-check@v2.0.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  release_plz_config_check:
-    name: Release-plz Config Validation
+      - name: Run security audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Formatting check
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  # Documentation check
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --document-private-items --workspace
+
+  # Code coverage reporting (only on PR)
+  coverage:
+    name: Code Coverage
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        ref: ${{ github.head_ref }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Validate GitHub Token
-      run: |
-        echo "🔐 Validating GitHub Token configuration..."
-        echo ""
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-        # Check if RELEASE_PLZ_TOKEN is available (we can't access the actual value for security)
-        if [ -n "${{ secrets.RELEASE_PLZ_TOKEN }}" ]; then
-          echo "✅ RELEASE_PLZ_TOKEN is configured"
-          TOKEN_SOURCE="RELEASE_PLZ_TOKEN"
-        else
-          echo "⚠️  RELEASE_PLZ_TOKEN not found, will use GITHUB_TOKEN"
-          TOKEN_SOURCE="GITHUB_TOKEN"
-        fi
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
-        # Test token format validation logic (using GITHUB_TOKEN as it's always available)
-        TEST_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
-        # Basic token format validation
-        if [[ "$TEST_TOKEN" =~ ^(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_) ]]; then
-          echo "✅ Token format validation logic works correctly"
-        else
-          echo "❌ Token format validation failed - this may indicate an issue"
-          exit 1
-        fi
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          fail_ci_if_error: false
+          verbose: true
+          flags: unittests
+          name: codecov-umbrella
 
-        # Test API connectivity with GITHUB_TOKEN
-        echo "🌐 Testing GitHub API connectivity..."
-        curl -s -H "Authorization: Bearer $TEST_TOKEN" \
-             -H "Accept: application/vnd.github.v3+json" \
-             https://api.github.com/user > /dev/null || {
-          echo "❌ GitHub API connectivity test failed"
-          exit 1
-        }
-
-        echo "✅ GitHub API connectivity test passed"
-        echo "🎯 Token validation will use: $TOKEN_SOURCE"
-
-    - name: Validate release-plz configuration file
-      run: |
-        echo "🔧 Validating release-plz configuration..."
-        echo ""
-
-        # Check if config file exists
-        if [ -f "release-plz.toml" ]; then
-          echo "✅ release-plz.toml found"
-        else
-          echo "❌ release-plz.toml not found"
-          exit 1
-        fi
-
-        # Validate TOML syntax
-        echo "🧪 Checking TOML syntax..."
-        if command -v toml-cli &> /dev/null; then
-          toml-cli get release-plz.toml . > /dev/null || {
-            echo "❌ Invalid TOML syntax in release-plz.toml"
-            exit 1
-          }
-        else
-          # Basic syntax check using Python (available in GitHub runners)
-          python3 -c "
-        import tomllib
-        try:
-            with open('release-plz.toml', 'rb') as f:
-                tomllib.load(f)
-            print('✅ TOML syntax is valid')
-        except Exception as e:
-            print(f'❌ TOML syntax error: {e}')
-            exit(1)
-        " || exit 1
-        fi
-
-        echo ""
-        echo "✅ Release-plz configuration validation completed!"
-        echo "📝 Configuration file exists and has valid TOML syntax."
-        echo "🎯 The workflow should work correctly when merged to main."

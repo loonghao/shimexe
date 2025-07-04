@@ -1,8 +1,8 @@
 use crate::archive::ArchiveExtractor;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
-use tracing::{debug, info, warn};
-use turbo_cdn::{DownloadOptions, Region, Source, TurboCdn};
+use tracing::{debug, warn};
+use turbo_cdn::TurboCdn;
 
 /// Turbo CDN-based downloader for remote executables
 pub struct Downloader {
@@ -12,17 +12,7 @@ pub struct Downloader {
 impl Downloader {
     /// Create a new turbo CDN downloader instance
     pub async fn new() -> Result<Self> {
-        let client = TurboCdn::builder()
-            .with_sources(&[
-                Source::github(),
-                Source::jsdelivr(),
-                Source::fastly(),
-                Source::cloudflare(),
-            ])
-            .with_region(Region::Global)
-            .with_cache(true)
-            .with_max_concurrent_downloads(8)
-            .build()
+        let client = TurboCdn::new()
             .await
             .with_context(|| "Failed to create TurboCdn client")?;
 
@@ -76,7 +66,7 @@ impl Downloader {
 
     /// Download a file from URL to the specified path using turbo-cdn
     pub async fn download_file(&mut self, url: &str, target_path: &Path) -> Result<()> {
-        info!(
+        debug!(
             "Downloading {} to {} using turbo-cdn",
             url,
             target_path.display()
@@ -88,19 +78,10 @@ impl Downloader {
                 .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
         }
 
-        // Configure download options
-        let options = DownloadOptions::builder()
-            .output_dir(target_path.parent().unwrap_or_else(|| Path::new(".")))
-            .use_cache(true)
-            .verify_checksum(false) // Disable checksum verification for now
-            .max_concurrent_chunks(8)
-            .chunk_size(2 * 1024 * 1024) // 2MB chunks
-            .build();
-
         // Use turbo-cdn to download from URL with automatic optimization
         let result = self
             .client
-            .download_from_url(url, Some(options))
+            .download_from_url(url)
             .await
             .with_context(|| format!("Failed to download from URL: {}", url))?;
 
@@ -115,12 +96,11 @@ impl Downloader {
             })?;
         }
 
-        info!(
-            "Download completed: {} bytes in {:.2}s at {:.2} MB/s from {}",
+        debug!(
+            "Download completed: {} bytes in {:.2}s at {:.2} MB/s",
             result.size,
             result.duration.as_secs_f64(),
-            result.speed / 1_000_000.0,
-            result.source
+            result.speed / 1_000_000.0
         );
 
         Ok(())
@@ -142,20 +122,7 @@ impl Downloader {
         Ok(true)
     }
 
-    /// Get optimal CDN URL for a given URL without downloading
-    pub async fn get_optimal_url(&self, url: &str) -> Result<String> {
-        self.client
-            .get_optimal_url(url)
-            .await
-            .with_context(|| format!("Failed to get optimal URL for: {}", url))
-    }
 
-    /// Parse URL to extract repository information
-    pub fn parse_url(&self, url: &str) -> Result<turbo_cdn::ParsedUrl> {
-        self.client
-            .parse_url(url)
-            .with_context(|| format!("Failed to parse URL: {}", url))
-    }
 
     /// Infer application name from URL
     /// Examples:
@@ -197,12 +164,12 @@ impl Downloader {
         let downloaded = self.download_if_missing(url, &download_path).await?;
 
         if downloaded {
-            info!("Downloaded archive {} to {}", url, download_path.display());
+            debug!("Downloaded archive {} to {}", url, download_path.display());
         }
 
         // Check if it's an archive that needs extraction
         if ArchiveExtractor::is_archive(&download_path) {
-            info!("Extracting archive: {}", download_path.display());
+            debug!("Extracting archive: {}", download_path.display());
 
             // Extract to the same directory as the archive
             let extract_dir = download_path
@@ -220,7 +187,7 @@ impl Downloader {
                     download_path.display()
                 );
             } else {
-                info!("Found {} executables in archive", executables.len());
+                debug!("Found {} executables in archive", executables.len());
             }
 
             Ok(executables)
