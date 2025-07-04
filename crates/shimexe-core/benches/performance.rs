@@ -12,6 +12,8 @@ fn create_test_config() -> ShimConfig {
             args: vec!["hello".to_string(), "world".to_string()],
             cwd: None,
             download_url: None,
+            source_type: shimexe_core::config::SourceType::File,
+            extracted_executables: Vec::new(),
         },
         args: Default::default(),
         env: {

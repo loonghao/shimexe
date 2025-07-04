@@ -145,7 +145,12 @@ impl AddCommand {
 
                 // Use the first executable as the primary one
                 let primary_executable = &executables[0];
-                info!(
+                println!(
+                    "Downloaded and extracted archive from {}, found {} executables",
+                    self.path,
+                    executables.len()
+                );
+                debug!(
                     "Extracted {} executables from archive, using {} as primary",
                     executables.len(),
                     primary_executable.display()
@@ -169,7 +174,8 @@ impl AddCommand {
                     .with_context(|| format!("Failed to download file from {}", self.path))?;
 
                 if downloaded {
-                    info!("Downloaded {} to {}", self.path, download_path.display());
+                    println!("Downloaded {} to {}", self.path, download_path.display());
+                    debug!("Downloaded {} to {}", self.path, download_path.display());
                 } else {
                     debug!("File already exists at {}", download_path.display());
                 }
