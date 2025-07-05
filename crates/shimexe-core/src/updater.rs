@@ -438,8 +438,7 @@ impl ShimUpdater {
             Ok(())
         } else {
             Err(ShimError::ProcessExecution(format!(
-                "{} command failed",
-                context
+                "{context} command failed"
             )))
         }
     }
