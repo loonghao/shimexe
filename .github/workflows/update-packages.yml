@@ -21,6 +21,8 @@ jobs:
   update-packages:
     name: Update Package Configurations
     runs-on: windows-latest
+    # Only run for shimexe releases (not shimexe-core or other packages)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -32,20 +34,27 @@ jobs:
       run: |
         if ("${{ github.event_name }}" -eq "release") {
           $version = "${{ github.event.release.tag_name }}" -replace "^v", ""
+          $tag = "${{ github.event.release.tag_name }}"
         } else {
           $version = "${{ github.event.inputs.version }}"
+          $tag = "v$version"
         }
         echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "tag=$tag" >> $env:GITHUB_OUTPUT
         echo "Version: $version"
+        echo "Tag: $tag"
 
     - name: Get file hashes
       id: get_hashes
       run: |
         $version = "${{ steps.get_version.outputs.version }}"
-        $baseUrl = "https://github.com/loonghao/shimexe/releases/download/v$version"
+        $tag = "${{ steps.get_version.outputs.tag }}"
+        $baseUrl = "https://github.com/loonghao/shimexe/releases/download/$tag"
 
         # Get Windows x64 zip hash for Chocolatey and Scoop
         $zipUrl = "$baseUrl/shimexe-x86_64-pc-windows-msvc.zip"
+
+        Write-Host "Looking for release at: $zipUrl"
 
         # Wait for the release to be available with retry logic
         $maxRetries = 10
@@ -58,10 +67,12 @@ jobs:
           Write-Host "Attempt $retryCount of $maxRetries to download release..."
 
           try {
-            $response = Invoke-WebRequest -Uri $zipUrl -Method Head -UseBasicParsing
+            # First check if the release exists
+            $response = Invoke-WebRequest -Uri $zipUrl -Method Head -UseBasicParsing -ErrorAction Stop
             if ($response.StatusCode -eq 200) {
+              Write-Host "Release found, downloading for checksum calculation..."
               $tempFile = [System.IO.Path]::GetTempFileName()
-              Invoke-WebRequest -Uri $zipUrl -OutFile $tempFile -UseBasicParsing
+              Invoke-WebRequest -Uri $zipUrl -OutFile $tempFile -UseBasicParsing -ErrorAction Stop
               $hash = Get-FileHash -Path $tempFile -Algorithm SHA256
               Remove-Item $tempFile -Force
               $zipHash = $hash.Hash
@@ -73,14 +84,16 @@ jobs:
             } else {
               Write-Warning "Attempt $retryCount failed: HTTP $($response.StatusCode)"
               if ($retryCount -eq $maxRetries) {
-                Write-Error "Failed to get release after $maxRetries attempts"
+                Write-Error "Failed to get release after $maxRetries attempts. URL: $zipUrl"
                 exit 1
               }
             }
           } catch {
-            Write-Warning "Attempt $retryCount failed: $_"
+            Write-Warning "Attempt $retryCount failed: $($_.Exception.Message)"
+            Write-Host "Error details: $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
             if ($retryCount -eq $maxRetries) {
-              Write-Error "Failed to download release after $maxRetries attempts"
+              Write-Error "Failed to download release after $maxRetries attempts. URL: $zipUrl"
+              Write-Error "Last error: $($_.Exception.Message)"
               exit 1
             }
           }
@@ -178,10 +191,10 @@ jobs:
         args: pack chocolatey/shimexe.nuspec
 
     - name: Push to Chocolatey
-      if: github.event_name == 'release' && env.CHOCOLATEY_API_KEY != ''
+      if: github.event_name == 'release'
       uses: crazy-max/ghaction-chocolatey@v3.4.0
       with:
-        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ env.CHOCOLATEY_API_KEY }}
+        args: push chocolatey/shimexe.${{ steps.get_version.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
       env:
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
 
