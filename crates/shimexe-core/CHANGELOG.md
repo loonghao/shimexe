@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.5.0](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.4.0...shimexe-core-v0.5.0) - 2025-07-05
+
+### Added
+
+- disable clippy uninlined_format_args lint
+- upgrade turbo-cdn to 0.4.3 and improve verbose logging control
+
+### Fixed
+
+- resolve remaining clippy uninlined format args warnings
+- resolve clippy and rustdoc warnings for CI compatibility
+- adjust performance test timeouts for Windows environment
+
 ## [0.4.0](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.3.5...shimexe-core-v0.4.0) - 2025-06-23
 
 ### Added
