@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.5.0](https://github.com/loonghao/shimexe/compare/shimexe-v0.4.0...shimexe-v0.5.0) - 2025-07-05
+
+### Added
+
+- disable clippy uninlined_format_args lint
+- upgrade turbo-cdn to 0.4.3 and improve verbose logging control
+
+### Fixed
+
+- resolve clippy and rustdoc warnings for CI compatibility
+
+### Other
+
+- *(deps)* update crazy-max/ghaction-chocolatey action to v3.4.0
+
 ## [0.4.0](https://github.com/loonghao/shimexe/compare/v0.3.5...v0.4.0) - 2025-06-23
 
 ### Added
