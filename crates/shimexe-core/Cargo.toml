@@ -11,6 +11,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "Core library for shimexe - executable shim manager"
 
+[lints]
+workspace = true
+
 [dependencies]
 serde.workspace = true
 toml.workspace = true

@@ -15,6 +15,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "A modern, cross-platform executable shim manager with environment variable expansion and TOML configuration support"
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "shimexe"
 path = "src/main.rs"
@@ -93,3 +96,8 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Clippy configuration
+[workspace.lints.clippy]
+# Disable format-related lints that are too strict
+uninlined_format_args = "allow"
