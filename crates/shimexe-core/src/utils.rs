@@ -32,7 +32,8 @@ pub fn expand_env_vars(input: &str) -> Result<String> {
                     default.to_string()
                 } else {
                     return Err(ShimError::EnvExpansion(format!(
-                        "Environment variable '{var_name}' not found"
+                        "Environment variable '{}' not found",
+                        var_name
                     )));
                 }
             }
