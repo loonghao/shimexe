@@ -77,7 +77,10 @@ async fn main() -> Result<()> {
         ("info", "warn")
     };
     tracing_subscriber::fmt()
-        .with_env_filter(format!("shimexe={},turbo_cdn={}", shimexe_level, turbo_cdn_level))
+        .with_env_filter(format!(
+            "shimexe={},turbo_cdn={}",
+            shimexe_level, turbo_cdn_level
+        ))
         .init();
 
     // Run as main CLI

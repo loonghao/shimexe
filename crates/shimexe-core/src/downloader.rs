@@ -59,7 +59,7 @@ impl Downloader {
     }
 
     /// Generate download path for an application
-    /// Format: <base_dir>/<app_name>/bin/<filename>
+    /// Format: `<base_dir>/<app_name>/bin/<filename>`
     pub fn generate_download_path(base_dir: &Path, app_name: &str, filename: &str) -> PathBuf {
         base_dir.join(app_name).join("bin").join(filename)
     }
@@ -122,13 +122,11 @@ impl Downloader {
         Ok(true)
     }
 
-
-
     /// Infer application name from URL
     /// Examples:
-    /// - https://github.com/user/repo/releases/download/v1.0/app.exe -> "app"
-    /// - https://example.com/tools/my-tool.exe -> "my-tool"
-    /// - https://github.com/user/repo/releases/download/v1.0/app.zip -> "app"
+    /// - <https://github.com/user/repo/releases/download/v1.0/app.exe> -> "app"
+    /// - <https://example.com/tools/my-tool.exe> -> "my-tool"
+    /// - <https://github.com/user/repo/releases/download/v1.0/app.zip> -> "app"
     pub fn infer_app_name_from_url(url: &str) -> Option<String> {
         let filename = Self::extract_filename_from_url(url)?;
 
