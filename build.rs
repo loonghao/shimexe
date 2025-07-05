@@ -39,7 +39,7 @@ fn main() {
 
         // Compile the resources
         if let Err(e) = res.compile() {
-            eprintln!("Failed to compile Windows resources: {}", e);
+            eprintln!("Failed to compile Windows resources: {e}");
             // Don't fail the build if resource compilation fails
         }
     }
