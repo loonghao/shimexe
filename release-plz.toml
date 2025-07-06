@@ -1,33 +1,17 @@
-# Release-plz configuration for shimexe
+# Release-plz configuration for shimexe workspace
 #
-# Strategy: release-plz handles crates.io publishing and creates GitHub releases,
-# while .github/workflows/release.yml builds cross-platform binaries using upload-rust-binary-action.
-#
-# Workflow:
-# 1. release-plz creates tag (v1.0.0) and GitHub release with changelog
-# 2. Tag triggers release.yml workflow for cross-platform binary builds
-# 3. upload-rust-binary-action builds and uploads binaries to the existing release
-# 4. release-plz publishes to crates.io
-#
-# This approach leverages release-plz's strengths (version management, changelog, crates.io)
-# while using the specialized upload-rust-binary-action for cross-platform builds.
-#
-# Note: This is a mixed workspace where the root contains both workspace config and a package.
-# The shimexe package is at the root, and shimexe-core is in crates/shimexe-core.
+# This configuration handles a mixed workspace where:
+# - shimexe (main CLI) is at the root and needs GitHub releases
+# - shimexe-core (library) is in crates/ and only needs crates.io publishing
 
 [workspace]
-# Global defaults for all packages in the workspace
+# Global workspace settings
 changelog_update = true
-# Disable GitHub releases by default (only shimexe main package needs releases)
+# Only main package creates GitHub releases
 git_release_enable = false
-# Disable git tagging by default (only shimexe main package needs tags)
 git_tag_enable = false
 # Enable release processing for all packages
 release = true
-# Release behavior - only release when merging release PR
-release_always = false
-# Semver checking enabled for all packages
-semver_check = true
 # Update dependencies across workspace
 dependencies_update = true
 
@@ -43,31 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 """
 
-# Package-specific configuration for shimexe (main CLI executable package at root)
+# Main CLI package configuration (at root)
 [[package]]
 name = "shimexe"
-# Explicit path for root package in mixed workspace
-path = "."
-# Enable changelog updates for main package
-changelog_update = true
-# Enable GitHub releases (needed for executable distribution and package managers)
+# Enable GitHub releases for main CLI package
 git_release_enable = true
-# Enable git tagging for main package (triggers release.yml workflow)
 git_tag_enable = true
-# Enable processing for releases
-release = true
-# Standard tag format (v1.0.0) - triggers release.yml for cross-platform binaries
+# Standard tag format (triggers release.yml workflow)
 git_tag_name = "v{{version}}"
-# Allow major version bumps for breaking changes
-allow_dirty = false
-# Ensure proper semantic versioning
-semver_check = true
-# Create published releases (release.yml will add cross-platform binaries)
-git_release_draft = false
-# Enable crates.io publishing for main package
+# Enable changelog updates
+changelog_update = true
+# Enable crates.io publishing
 publish = true
-# Changelog path for main package
-changelog_path = "CHANGELOG.md"
 # Custom release body template
 git_release_body = """
 ## 🚀 What's Changed
@@ -102,24 +73,16 @@ scoop install shimexe
 **Full Changelog**: https://github.com/loonghao/shimexe/compare/{{previous_tag}}...{{version}}
 """
 
-# Package-specific configuration for shimexe-core (library package)
+# Library package configuration (in crates/)
 [[package]]
 name = "shimexe-core"
-# Explicit path for core package in workspace
 path = "crates/shimexe-core"
-# Disable GitHub releases for core package (library only needs crates.io)
+# Disable GitHub releases for library (only needs crates.io)
 git_release_enable = false
-# Disable git tagging for core package (no need for separate tags)
 git_tag_enable = false
-# Enable crates.io publishing for library
+# Enable crates.io publishing
 publish = true
-# Enable changelog updates for core package
+# Enable changelog updates
 changelog_update = true
-# Enable processing for releases
-release = true
-# Ensure proper semantic versioning
-semver_check = true
-# Changelog path for core package
+# Changelog path for library
 changelog_path = "crates/shimexe-core/CHANGELOG.md"
-# Allow dirty working directory for core package
-allow_dirty = false

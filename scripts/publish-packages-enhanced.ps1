@@ -234,17 +234,31 @@ For more information, visit: https://github.com/loonghao/shimexe
         # Pack and push
         Push-Location $chocoTempDir
         try {
-            choco pack shimexe.nuspec
+            Write-Host "Packing Chocolatey package..." -ForegroundColor Yellow
+            $packResult = choco pack shimexe.nuspec
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to pack Chocolatey package. Exit code: $LASTEXITCODE"
+                return
+            }
+
             if ($ChocolateyApiKey) {
-                choco push "shimexe.$Version.nupkg" --source https://push.chocolatey.org/ --api-key $ChocolateyApiKey
-                Write-Host "Published to Chocolatey successfully!" -ForegroundColor Green
+                Write-Host "Pushing to Chocolatey..." -ForegroundColor Yellow
+                $pushResult = choco push "shimexe.$Version.nupkg" --source https://push.chocolatey.org/ --api-key $ChocolateyApiKey
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "Published to Chocolatey successfully!" -ForegroundColor Green
+                } else {
+                    Write-Error "Failed to push to Chocolatey. Exit code: $LASTEXITCODE"
+                }
             } else {
                 Write-Warning "CHOCOLATEY_API_KEY not set, skipping push"
             }
         }
+        catch {
+            Write-Error "Error during Chocolatey publishing: $_"
+        }
         finally {
             Pop-Location
-            Remove-Item $chocoTempDir -Recurse -Force
+            Remove-Item $chocoTempDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
     
