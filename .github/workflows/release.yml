@@ -179,7 +179,7 @@ jobs:
   publish-chocolatey:
     name: Publish to Chocolatey
     needs: upload-assets
-    runs-on: windows-2022
+    runs-on: windows-2025
     if: startsWith(github.ref_name, 'v')
     timeout-minutes: 20
     steps:
