@@ -158,6 +158,11 @@ jobs:
             --github-token "${{ secrets.GITHUB_TOKEN }}" \
             --dry-run
 
+      - name: Configure Git for PR creation
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Create PR for package updates
         uses: peter-evans/create-pull-request@v7
         with:
@@ -175,6 +180,8 @@ jobs:
             This is an automated PR created after the release workflow.
           branch: "update-packages-v${{ steps.version.outputs.version }}"
           delete-branch: true
+          committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 
   publish-chocolatey:
     name: Publish to Chocolatey
