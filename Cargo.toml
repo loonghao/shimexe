@@ -23,7 +23,7 @@ name = "shimexe"
 path = "src/main.rs"
 
 [workspace.package]
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 authors = ["Hal <hal.long@outlook.com>"]
 license = "MIT"
@@ -72,7 +72,7 @@ async-trait = "0.1"
 tempfile = "3.8"
 
 [dependencies]
-shimexe-core = { version = "0.5.1", path = "crates/shimexe-core" }
+shimexe-core = { version = "0.5.2", path = "crates/shimexe-core" }
 clap.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
