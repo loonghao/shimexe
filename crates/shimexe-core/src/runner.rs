@@ -8,7 +8,7 @@ use crate::config::ShimConfig;
 use crate::downloader::Downloader;
 use crate::error::{Result, ShimError};
 use crate::updater::ShimUpdater;
-use crate::utils::merge_env_vars;
+use crate::utils::get_builtin_env_vars;
 
 /// Cache entry for executable validation results
 #[derive(Debug, Clone)]
@@ -163,12 +163,16 @@ impl ShimRunner {
             cmd.current_dir(cwd);
         }
 
-        // Set environment variables (optimized to avoid unnecessary allocations)
-        if !self.config.env.is_empty() {
-            let env_vars = merge_env_vars(&self.config.env);
-            for (key, value) in env_vars {
-                cmd.env(key, value);
-            }
+        // Set environment variables (inherit current env and add custom ones)
+        // First, set built-in environment variables
+        let builtin_vars = get_builtin_env_vars();
+        for (key, value) in builtin_vars {
+            cmd.env(key, value);
+        }
+
+        // Then, set custom environment variables (these will override built-ins if same key)
+        for (key, value) in &self.config.env {
+            cmd.env(key, value);
         }
 
         // Configure stdio to inherit from parent
