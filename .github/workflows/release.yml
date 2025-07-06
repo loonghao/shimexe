@@ -159,7 +159,7 @@ jobs:
             --dry-run
 
       - name: Create PR for package updates
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update package manifests to v${{ steps.version.outputs.version }}"
