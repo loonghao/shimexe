@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.5.4](https://github.com/loonghao/shimexe/compare/shimexe-v0.5.3...shimexe-v0.5.4) - 2025-07-06
+
+### Fixed
+
+- make codecov informational only, don't fail CI
+- resolve package manager publishing issues
+
+### Other
+
+- *(deps)* update peter-evans/create-pull-request action to v7
+
 ## [0.5.3](https://github.com/loonghao/shimexe/compare/shimexe-v0.5.2...shimexe-v0.5.3) - 2025-07-06
 
 ### Fixed
