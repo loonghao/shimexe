@@ -7,9 +7,11 @@
 [workspace]
 # Global workspace settings
 changelog_update = true
-# Only main package creates GitHub releases
+# Only main package creates GitHub releases (overridden per package)
 git_release_enable = false
 git_tag_enable = false
+# Set default tag format for workspace (overridden by package-specific settings)
+git_tag_name = "v{{version}}"
 # Enable release processing for all packages
 release = true
 # Update dependencies across workspace
@@ -30,15 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Main CLI package configuration (at root)
 [[package]]
 name = "shimexe"
-# Enable GitHub releases for main CLI package
+# Explicitly override workspace settings for main package
 git_release_enable = true
 git_tag_enable = true
-# Standard tag format (triggers release.yml workflow)
+# Explicit tag format - must be v{{version}} to trigger release.yml
 git_tag_name = "v{{version}}"
 # Enable changelog updates
 changelog_update = true
 # Enable crates.io publishing
 publish = true
+# Ensure this package is processed for releases
+release = true
 # Custom release body template
 git_release_body = """
 ## 🚀 What's Changed
@@ -77,12 +81,14 @@ scoop install shimexe
 [[package]]
 name = "shimexe-core"
 path = "crates/shimexe-core"
-# Disable GitHub releases for library (only needs crates.io)
+# Explicitly disable GitHub releases for library (only needs crates.io)
 git_release_enable = false
 git_tag_enable = false
 # Enable crates.io publishing
 publish = true
 # Enable changelog updates
 changelog_update = true
+# Enable release processing
+release = true
 # Changelog path for library
 changelog_path = "crates/shimexe-core/CHANGELOG.md"
