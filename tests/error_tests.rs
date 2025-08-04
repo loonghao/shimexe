@@ -1,4 +1,5 @@
 use shimexe_core::error::{Result, ShimError};
+use std::error::Error;
 use std::io;
 
 #[test]
