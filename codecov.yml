@@ -11,24 +11,26 @@ coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: 100%
+        # Set target to 35% (current coverage) to avoid failures
+        target: 35%
+        threshold: 5%
         # Only inform, don't fail CI
         if_ci_failed: success
+        if_not_found: success
+        if_no_uploads: success
         # Set informational only - won't block PR merges
         informational: true
-        # Disable status checks completely
-        enabled: no
     patch:
       default:
-        target: auto
-        threshold: 100%
+        # Set target to 35% to match current coverage
+        target: 35%
+        threshold: 5%
         # Only inform, don't fail CI
         if_ci_failed: success
+        if_not_found: success
+        if_no_uploads: success
         # Set informational only - won't block PR merges
         informational: true
-        # Disable status checks completely
-        enabled: no
 
 parsers:
   gcov:
@@ -43,7 +45,19 @@ comment:
   behavior: default
   require_changes: no
 
+# GitHub status checks configuration
 github_checks:
   annotations: true
   # Don't block PR merges, only provide informational feedback
   informational: true
+
+# Ensure all status checks are informational only
+flag_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        informational: true
+      - type: patch
+        target: auto
+        informational: true
