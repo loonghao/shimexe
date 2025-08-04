@@ -73,6 +73,17 @@ scoop install shimexe
 **Full Changelog**: https://github.com/loonghao/shimexe/compare/{{previous_tag}}...{{version}}
 """
 
+# Files to update during release (beyond Cargo.toml and CHANGELOG.md)
+update_files = [
+  { file = "README.md", search = "shimexe-v[0-9]+\\.[0-9]+\\.[0-9]+", replace = "shimexe-v{{version}}" },
+  { file = "README.md", search = "download/v[0-9]+\\.[0-9]+\\.[0-9]+", replace = "download/v{{version}}" },
+  { file = "README_zh.md", search = "shimexe-v[0-9]+\\.[0-9]+\\.[0-9]+", replace = "shimexe-v{{version}}" },
+  { file = "README_zh.md", search = "download/v[0-9]+\\.[0-9]+\\.[0-9]+", replace = "download/v{{version}}" },
+  { file = "pkg/scoop/shimexe.json", search = "\"version\": \"[0-9]+\\.[0-9]+\\.[0-9]+\"", replace = "\"version\": \"{{version}}\"" },
+  { file = "pkg/scoop/shimexe.json", search = "shimexe-[0-9]+\\.[0-9]+\\.[0-9]+-", replace = "shimexe-{{version}}-" },
+  { file = "pkg/homebrew/shimexe.rb", search = "version \"[0-9]+\\.[0-9]+\\.[0-9]+\"", replace = "version \"{{version}}\"" },
+]
+
 # Library package configuration (in crates/)
 [[package]]
 name = "shimexe-core"
