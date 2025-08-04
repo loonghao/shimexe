@@ -1,13 +1,11 @@
 name: Release
 
-# This workflow handles both release-please automation and publishing
-# It creates releases when changes are pushed to main, and publishes binaries on tags
+# This workflow handles release-please automation and publishing
+# It creates releases when changes are pushed to main, and publishes binaries when releases are created
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -37,36 +35,11 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Update package manager files after release is created
-      - name: Update package manager files
-        if: ${{ steps.release.outputs.release_created }}
-        uses: actions/checkout@v4
-
-      - name: Run package version update script
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          chmod +x scripts/update-package-versions.sh
-          ./scripts/update-package-versions.sh "${{ steps.release.outputs.tag_name }}"
-
-      - name: Commit package updates
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          if git diff --quiet; then
-            echo "No package manager files to update"
-          else
-            git add pkg/
-            git commit -m "chore: update package manager files to ${{ steps.release.outputs.tag_name }}"
-            git push
-          fi
-
   upload-assets:
     name: Upload release assets
     needs: release-please
-    # Only run if release was created or if triggered by tag push
-    if: ${{ needs.release-please.outputs.release_created || startsWith(github.ref_name, 'v') }}
+    # Only run if release was created
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -127,18 +100,19 @@ jobs:
 
   publish-packages:
     name: Publish to package managers
-    needs: upload-assets
+    needs: [release-please, upload-assets]
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref_name, 'v')
+    if: ${{ needs.release-please.outputs.release_created }}
     timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Extract version from release
         id: version
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
+          VERSION="${{ needs.release-please.outputs.tag_name }}"
+          VERSION=${VERSION#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -168,7 +142,7 @@ jobs:
           for asset in "${EXPECTED_ASSETS[@]}"; do
             echo "Checking for asset: $asset"
             curl -f -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ needs.release-please.outputs.tag_name }}" \
               | jq -r '.assets[].name' | grep -q "$asset" || {
                 echo "Asset $asset not found, waiting..."
                 sleep 10
@@ -233,19 +207,19 @@ jobs:
 
   publish-chocolatey:
     name: Publish to Chocolatey
-    needs: upload-assets
+    needs: [release-please, upload-assets]
     runs-on: windows-2022
-    if: startsWith(github.ref_name, 'v')
+    if: ${{ needs.release-please.outputs.release_created }}
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Extract version from release
         id: version
         shell: pwsh
         run: |
-          $VERSION = "${{ github.ref_name }}" -replace '^v', ''
+          $VERSION = "${{ needs.release-please.outputs.tag_name }}" -replace '^v', ''
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $VERSION"
 
@@ -266,7 +240,7 @@ jobs:
               "Accept" = "application/vnd.github.v3+json"
             }
 
-            $release = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" -Headers $headers
+            $release = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ needs.release-please.outputs.tag_name }}" -Headers $headers
             $assetExists = $release.assets | Where-Object { $_.name -eq $asset }
 
             if (-not $assetExists) {
@@ -299,9 +273,9 @@ jobs:
 
   update-package-managers:
     name: Update package managers
-    needs: upload-assets
+    needs: [release-please, upload-assets]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref_name, 'v')
+    if: ${{ needs.release-please.outputs.release_created }}
     steps:
       - name: Checkout shimexe
         uses: actions/checkout@v4
@@ -309,7 +283,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ needs.release-please.outputs.tag_name }}"
           VERSION="${VERSION#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
