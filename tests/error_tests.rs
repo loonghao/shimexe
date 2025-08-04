@@ -9,28 +9,49 @@ fn test_error_display() {
     assert!(io_error.to_string().contains("file not found"));
 
     let config_error = ShimError::Config("invalid configuration".to_string());
-    assert_eq!(config_error.to_string(), "Shim configuration error: invalid configuration");
+    assert_eq!(
+        config_error.to_string(),
+        "Shim configuration error: invalid configuration"
+    );
 
     let executable_error = ShimError::ExecutableNotFound("test.exe".to_string());
-    assert_eq!(executable_error.to_string(), "Executable not found: test.exe");
+    assert_eq!(
+        executable_error.to_string(),
+        "Executable not found: test.exe"
+    );
 
     let process_error = ShimError::ProcessExecution("command failed".to_string());
-    assert_eq!(process_error.to_string(), "Process execution error: command failed");
+    assert_eq!(
+        process_error.to_string(),
+        "Process execution error: command failed"
+    );
 
     let shim_error = ShimError::ShimNotFound("test-shim".to_string());
     assert_eq!(shim_error.to_string(), "Shim not found: test-shim");
 
     let permission_error = ShimError::PermissionDenied("access denied".to_string());
-    assert_eq!(permission_error.to_string(), "Permission denied: access denied");
+    assert_eq!(
+        permission_error.to_string(),
+        "Permission denied: access denied"
+    );
 
     let template_error = ShimError::TemplateError("template parsing failed".to_string());
-    assert_eq!(template_error.to_string(), "Template processing error: template parsing failed");
+    assert_eq!(
+        template_error.to_string(),
+        "Template processing error: template parsing failed"
+    );
 
     let env_error = ShimError::EnvExpansion("variable not found".to_string());
-    assert_eq!(env_error.to_string(), "Environment variable expansion error: variable not found");
+    assert_eq!(
+        env_error.to_string(),
+        "Environment variable expansion error: variable not found"
+    );
 
     let invalid_shim_error = ShimError::InvalidShimFile("corrupted shim".to_string());
-    assert_eq!(invalid_shim_error.to_string(), "Invalid shim file: corrupted shim");
+    assert_eq!(
+        invalid_shim_error.to_string(),
+        "Invalid shim file: corrupted shim"
+    );
 }
 
 #[test]
@@ -58,7 +79,7 @@ fn test_result_type_alias() {
 
     assert!(test_function().is_ok());
     assert!(test_error_function().is_err());
-    
+
     match test_error_function() {
         Err(ShimError::Config(msg)) => assert_eq!(msg, "test error"),
         _ => panic!("Expected Config error"),
@@ -77,10 +98,10 @@ fn test_error_debug_format() {
 fn test_error_chain() {
     let io_error = io::Error::new(io::ErrorKind::NotFound, "original error");
     let shim_error = ShimError::Io(io_error);
-    
+
     // Test that the error chain is preserved
     assert!(shim_error.to_string().contains("original error"));
-    
+
     // Test source error access
     let source = shim_error.source();
     assert!(source.is_some());
