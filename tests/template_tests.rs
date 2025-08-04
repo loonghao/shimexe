@@ -14,19 +14,25 @@ fn test_args_config_default() {
 
 #[test]
 fn test_args_mode_serialization() {
-    // Test that ArgsMode can be serialized/deserialized with TOML
-    let modes = vec![
+    // Test that ArgsMode can be serialized/deserialized within ArgsConfig
+    let configs = vec![
         (ArgsMode::Template, "template"),
         (ArgsMode::Merge, "merge"),
         (ArgsMode::Replace, "replace"),
         (ArgsMode::Prepend, "prepend"),
     ];
 
-    for (mode, expected_str) in modes {
-        let serialized = toml::to_string(&mode).unwrap();
+    for (mode, expected_str) in configs {
+        let config = ArgsConfig {
+            mode: mode.clone(),
+            ..Default::default()
+        };
+
+        let serialized = toml::to_string(&config).unwrap();
         assert!(serialized.contains(expected_str));
-        let deserialized: ArgsMode = toml::from_str(&serialized).unwrap();
-        assert_eq!(mode, deserialized);
+
+        let deserialized: ArgsConfig = toml::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.mode, mode);
     }
 }
 
