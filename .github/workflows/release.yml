@@ -1,13 +1,20 @@
 name: Release
 
+# This workflow handles both release-please automation and publishing
+# It creates releases when changes are pushed to main, and publishes binaries on tags
 on:
   push:
+    branches:
+      - main
     tags:
-      - "v*"
+      - 'v*'
+  workflow_dispatch:
 
-# We need this to be able to create releases.
 permissions:
-  contents: write
+  contents: write # Required for creating releases and uploading artifacts
+  pull-requests: write # Required for release-please
+  issues: write # Required for release-please
+  id-token: write # Required for trusted publishing
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,10 +22,51 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  # First job: Run release-please to create releases and tags
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # Update package manager files after release is created
+      - name: Update package manager files
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v4
+
+      - name: Run package version update script
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          chmod +x scripts/update-package-versions.sh
+          ./scripts/update-package-versions.sh "${{ steps.release.outputs.tag_name }}"
+
+      - name: Commit package updates
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "No package manager files to update"
+          else
+            git add pkg/
+            git commit -m "chore: update package manager files to ${{ steps.release.outputs.tag_name }}"
+            git push
+          fi
+
   upload-assets:
     name: Upload release assets
-    # Only run if this is a shimexe release (not other packages in workspace)
-    if: startsWith(github.ref_name, 'v')
+    needs: release-please
+    # Only run if release was created or if triggered by tag push
+    if: ${{ needs.release-please.outputs.release_created || startsWith(github.ref_name, 'v') }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
