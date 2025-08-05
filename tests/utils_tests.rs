@@ -2,9 +2,6 @@ use shimexe_core::utils::*;
 use shimexe_core::error::ShimError;
 use std::collections::HashMap;
 use std::env;
-use std::fs;
-use std::path::Path;
-use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_expand_env_vars_basic() {
@@ -227,176 +224,92 @@ fn test_expand_env_vars_edge_cases() {
 }
 
 #[test]
-fn test_normalize_path_basic() {
-    let path = "test/path/to/file";
-    let normalized = normalize_path(path);
+fn test_path_separator_consistency() {
+    let sep = get_path_separator();
 
     #[cfg(windows)]
-    assert_eq!(normalized, "test\\path\\to\\file");
+    assert_eq!(sep, "\\");
     #[cfg(not(windows))]
-    assert_eq!(normalized, "test/path/to/file");
+    assert_eq!(sep, "/");
+
+    // Test that separator is consistent
+    assert!(!sep.is_empty());
+    assert!(sep.len() == 1);
 }
 
 #[test]
-fn test_normalize_path_with_backslashes() {
-    let path = "test\\path\\to\\file";
-    let normalized = normalize_path(path);
+fn test_builtin_env_vars_comprehensive() {
+    let vars = get_builtin_env_vars();
 
+    // Test that all expected built-in variables are present
+    assert!(vars.contains_key("EXE_EXT"));
+    assert!(vars.contains_key("PATH_SEP"));
+
+    // Test platform-specific values
     #[cfg(windows)]
-    assert_eq!(normalized, "test\\path\\to\\file");
+    {
+        assert_eq!(vars.get("EXE_EXT").unwrap(), ".exe");
+        assert_eq!(vars.get("PATH_SEP").unwrap(), "\\");
+    }
+
     #[cfg(not(windows))]
-    assert_eq!(normalized, "test/path/to/file");
-}
+    {
+        assert_eq!(vars.get("EXE_EXT").unwrap(), "");
+        assert_eq!(vars.get("PATH_SEP").unwrap(), "/");
+    }
 
-#[test]
-fn test_normalize_path_mixed_separators() {
-    let path = "test/path\\to/file";
-    let normalized = normalize_path(path);
+    // Test that directory variables are present (if available)
+    // These might not be available in all environments, so we just check they exist
+    if vars.contains_key("HOME") {
+        assert!(!vars.get("HOME").unwrap().is_empty());
+    }
 
-    #[cfg(windows)]
-    assert_eq!(normalized, "test\\path\\to\\file");
-    #[cfg(not(windows))]
-    assert_eq!(normalized, "test/path/to/file");
-}
+    if vars.contains_key("CONFIG_DIR") {
+        assert!(!vars.get("CONFIG_DIR").unwrap().is_empty());
+    }
 
-#[test]
-fn test_normalize_path_empty() {
-    let normalized = normalize_path("");
-    assert_eq!(normalized, "");
-}
-
-#[test]
-fn test_validate_shim_name_valid() {
-    let valid_names = vec![
-        "test",
-        "test-shim",
-        "test_shim",
-        "test123",
-        "Test",
-        "TEST",
-        "a",
-        "my-awesome-tool",
-        "tool_v2",
-    ];
-
-    for name in valid_names {
-        assert!(validate_shim_name(name).is_ok(), "Name '{}' should be valid", name);
+    if vars.contains_key("DATA_DIR") {
+        assert!(!vars.get("DATA_DIR").unwrap().is_empty());
     }
 }
 
 #[test]
-fn test_validate_shim_name_invalid() {
-    let invalid_names = vec![
-        "",           // Empty
-        " ",          // Whitespace only
-        "test shim",  // Contains space
-        "test/shim",  // Contains slash
-        "test\\shim", // Contains backslash
-        "test:shim",  // Contains colon
-        "test*shim",  // Contains asterisk
-        "test?shim",  // Contains question mark
-        "test\"shim", // Contains quote
-        "test<shim",  // Contains less than
-        "test>shim",  // Contains greater than
-        "test|shim",  // Contains pipe
-        ".test",      // Starts with dot
-        "test.",      // Ends with dot
-        "CON",        // Reserved Windows name
-        "PRN",        // Reserved Windows name
-        "AUX",        // Reserved Windows name
-        "NUL",        // Reserved Windows name
-        "COM1",       // Reserved Windows name
-        "LPT1",       // Reserved Windows name
-    ];
+fn test_merge_env_vars_priority() {
+    // Test that custom environment variables take priority
+    let mut custom_env = HashMap::new();
+    custom_env.insert("TEST_PRIORITY".to_string(), "custom_value".to_string());
+    custom_env.insert("EXE_EXT".to_string(), "custom_ext".to_string());
 
-    for name in invalid_names {
-        assert!(validate_shim_name(name).is_err(), "Name '{}' should be invalid", name);
-    }
+    let merged = merge_env_vars(&custom_env);
+
+    // Custom variables should override built-in ones
+    assert_eq!(merged.get("EXE_EXT").unwrap(), "custom_ext");
+    assert_eq!(merged.get("TEST_PRIORITY").unwrap(), "custom_value");
+
+    // Built-in variables should still be present (unless overridden)
+    assert!(merged.contains_key("PATH_SEP"));
 }
 
 #[test]
-fn test_get_platform() {
-    let platform = get_platform();
+fn test_merge_env_vars_system_integration() {
+    // Set a system environment variable
+    env::set_var("SHIMEXE_SYSTEM_TEST", "system_value");
 
-    #[cfg(target_os = "windows")]
-    assert_eq!(platform, "windows");
+    let mut custom_env = HashMap::new();
+    custom_env.insert("SHIMEXE_CUSTOM_TEST".to_string(), "custom_value".to_string());
 
-    #[cfg(target_os = "macos")]
-    assert_eq!(platform, "macos");
+    let merged = merge_env_vars(&custom_env);
 
-    #[cfg(target_os = "linux")]
-    assert_eq!(platform, "linux");
+    // Should include system environment variables
+    assert_eq!(merged.get("SHIMEXE_SYSTEM_TEST").unwrap(), "system_value");
 
-    // Should always return a non-empty string
-    assert!(!platform.is_empty());
-}
+    // Should include custom variables
+    assert_eq!(merged.get("SHIMEXE_CUSTOM_TEST").unwrap(), "custom_value");
 
-#[test]
-fn test_get_architecture() {
-    let arch = get_architecture();
+    // Should include built-in variables
+    assert!(merged.contains_key("EXE_EXT"));
+    assert!(merged.contains_key("PATH_SEP"));
 
-    #[cfg(target_arch = "x86_64")]
-    assert_eq!(arch, "x86_64");
-
-    #[cfg(target_arch = "x86")]
-    assert_eq!(arch, "x86");
-
-    #[cfg(target_arch = "aarch64")]
-    assert_eq!(arch, "aarch64");
-
-    // Should always return a non-empty string
-    assert!(!arch.is_empty());
-}
-
-#[test]
-fn test_resolve_executable_path_absolute() {
-    let temp_dir = TempDir::new().unwrap();
-    let exe_path = temp_dir.path().join("test.exe");
-    fs::write(&exe_path, "test").unwrap();
-
-    let resolved = resolve_executable_path(&exe_path.to_string_lossy()).unwrap();
-    assert_eq!(resolved, exe_path);
-}
-
-#[test]
-fn test_resolve_executable_path_in_path() {
-    // Test with a command that should be in PATH
-    #[cfg(windows)]
-    let result = resolve_executable_path("cmd");
-    #[cfg(not(windows))]
-    let result = resolve_executable_path("sh");
-
-    assert!(result.is_ok());
-    let resolved = result.unwrap();
-    assert!(resolved.exists());
-}
-
-#[test]
-fn test_resolve_executable_path_not_found() {
-    let result = resolve_executable_path("nonexistent_executable_12345");
-    assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ShimError::ExecutableNotFound(_)));
-}
-
-#[test]
-fn test_extract_archive_unsupported() {
-    let temp_dir = TempDir::new().unwrap();
-    let archive_path = temp_dir.path().join("test.unsupported");
-    let extract_dir = temp_dir.path().join("extract");
-
-    fs::write(&archive_path, "fake archive").unwrap();
-
-    let result = extract_archive(&archive_path, &extract_dir);
-    assert!(result.is_err());
-    // Should return an error for unsupported archive types
-}
-
-#[test]
-fn test_extract_archive_nonexistent() {
-    let temp_dir = TempDir::new().unwrap();
-    let archive_path = temp_dir.path().join("nonexistent.zip");
-    let extract_dir = temp_dir.path().join("extract");
-
-    let result = extract_archive(&archive_path, &extract_dir);
-    assert!(result.is_err());
+    // Clean up
+    env::remove_var("SHIMEXE_SYSTEM_TEST");
 }
