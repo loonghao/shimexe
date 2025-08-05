@@ -1,9 +1,6 @@
 use shimexe_core::updater::ShimUpdater;
 use shimexe_core::config::{AutoUpdate, UpdateProvider, VersionCheck};
-use shimexe_core::error::ShimError;
-use std::fs;
-use std::path::PathBuf;
-use tempfile::{NamedTempFile, TempDir};
+use tempfile::TempDir;
 
 fn create_test_auto_update_config() -> AutoUpdate {
     AutoUpdate {
@@ -31,7 +28,7 @@ fn test_shim_updater_creation() {
     let executable_path = temp_dir.path().join("test.exe");
     let config = create_test_auto_update_config();
 
-    let updater = ShimUpdater::new(config.clone(), shim_path.clone(), executable_path.clone());
+    let _updater = ShimUpdater::new(config.clone(), shim_path.clone(), executable_path.clone());
 
     // Test that updater was created successfully
     // Note: The fields are private, so we can't directly access them
