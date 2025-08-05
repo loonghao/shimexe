@@ -295,7 +295,10 @@ fn test_merge_env_vars_system_integration() {
     env::set_var("SHIMEXE_SYSTEM_TEST", "system_value");
 
     let mut custom_env = HashMap::new();
-    custom_env.insert("SHIMEXE_CUSTOM_TEST".to_string(), "custom_value".to_string());
+    custom_env.insert(
+        "SHIMEXE_CUSTOM_TEST".to_string(),
+        "custom_value".to_string(),
+    );
 
     let merged = merge_env_vars(&custom_env);
 

@@ -1,5 +1,5 @@
-use shimexe_core::updater::ShimUpdater;
 use shimexe_core::config::{AutoUpdate, UpdateProvider, VersionCheck};
+use shimexe_core::updater::ShimUpdater;
 use tempfile::TempDir;
 
 fn create_test_auto_update_config() -> AutoUpdate {
@@ -10,7 +10,9 @@ fn create_test_auto_update_config() -> AutoUpdate {
             asset_pattern: "test-{version}-{os}-{arch}".to_string(),
             include_prerelease: false,
         },
-        download_url: "https://github.com/test/repo/releases/download/v{version}/test-{version}-{os}-{arch}".to_string(),
+        download_url:
+            "https://github.com/test/repo/releases/download/v{version}/test-{version}-{os}-{arch}"
+                .to_string(),
         version_check: VersionCheck::GithubLatest {
             repo: "test/repo".to_string(),
             include_prerelease: false,
@@ -32,8 +34,7 @@ fn test_shim_updater_creation() {
 
     // Test that updater was created successfully
     // Note: The fields are private, so we can't directly access them
-    // This test mainly ensures the constructor works
-    assert!(true); // Placeholder assertion
+    // This test mainly ensures the constructor works without panicking
 }
 
 #[test]
@@ -43,7 +44,10 @@ fn test_auto_update_config_creation() {
     assert!(config.enabled);
     assert_eq!(config.check_interval_hours, 24);
     assert!(matches!(config.provider, UpdateProvider::Github { .. }));
-    assert!(matches!(config.version_check, VersionCheck::GithubLatest { .. }));
+    assert!(matches!(
+        config.version_check,
+        VersionCheck::GithubLatest { .. }
+    ));
 }
 
 #[test]
@@ -62,7 +66,11 @@ fn test_version_check_github_latest() {
         include_prerelease: false,
     };
 
-    if let VersionCheck::GithubLatest { repo, include_prerelease } = config {
+    if let VersionCheck::GithubLatest {
+        repo,
+        include_prerelease,
+    } = config
+    {
         assert_eq!(repo, "owner/repo");
         assert!(!include_prerelease);
     } else {
@@ -78,7 +86,12 @@ fn test_version_check_http() {
         regex_pattern: None,
     };
 
-    if let VersionCheck::Http { url, json_path, regex_pattern } = config {
+    if let VersionCheck::Http {
+        url,
+        json_path,
+        regex_pattern,
+    } = config
+    {
         assert_eq!(url, "https://api.example.com/version");
         assert_eq!(json_path, Some("version".to_string()));
         assert!(regex_pattern.is_none());
@@ -95,7 +108,12 @@ fn test_update_provider_github() {
         include_prerelease: true,
     };
 
-    if let UpdateProvider::Github { repo, asset_pattern, include_prerelease } = provider {
+    if let UpdateProvider::Github {
+        repo,
+        asset_pattern,
+        include_prerelease,
+    } = provider
+    {
         assert_eq!(repo, "owner/repository");
         assert_eq!(asset_pattern, "app-{version}-{os}-{arch}.tar.gz");
         assert!(include_prerelease);
@@ -128,11 +146,16 @@ fn test_auto_update_serialization() {
     let deserialized: AutoUpdate = toml::from_str(&serialized).unwrap();
 
     assert_eq!(config.enabled, deserialized.enabled);
-    assert_eq!(config.check_interval_hours, deserialized.check_interval_hours);
-    assert!(matches!(deserialized.provider, UpdateProvider::Github { .. }));
-    assert!(matches!(deserialized.version_check, VersionCheck::GithubLatest { .. }));
+    assert_eq!(
+        config.check_interval_hours,
+        deserialized.check_interval_hours
+    );
+    assert!(matches!(
+        deserialized.provider,
+        UpdateProvider::Github { .. }
+    ));
+    assert!(matches!(
+        deserialized.version_check,
+        VersionCheck::GithubLatest { .. }
+    ));
 }
-
-
-
-

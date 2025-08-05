@@ -1,8 +1,6 @@
-use shimexe_core::traits::{
-    DefaultConfigLoader, ShimConfigLoader, ShimRunnerBuilder,
-};
 use shimexe_core::config::{ShimConfig, ShimCore, SourceType};
 use shimexe_core::error::{Result, ShimError};
+use shimexe_core::traits::{DefaultConfigLoader, ShimConfigLoader, ShimRunnerBuilder};
 use std::collections::HashMap;
 use std::path::Path;
 use tempfile::NamedTempFile;
@@ -61,7 +59,7 @@ fn test_shim_runner_builder_creation() {
 
     // Test that builder can be created - we can't test private fields
     // but we can test that it doesn't panic
-    assert!(true);
+    // If we reach this point, the test passed
 }
 
 #[test]
@@ -70,7 +68,7 @@ fn test_shim_runner_builder_default() {
     let _builder2 = ShimRunnerBuilder::default();
 
     // Both should be created successfully
-    assert!(true);
+    // If we reach this point, the test passed
 }
 
 // Mock implementations for testing
@@ -86,7 +84,7 @@ impl ShimConfigLoader for MockConfigLoader {
             Ok(create_test_config())
         }
     }
-    
+
     fn save_config(&self, _config: &ShimConfig, _path: &Path) -> Result<()> {
         if self.should_fail {
             Err(ShimError::Config("Mock save failure".to_string()))
@@ -94,15 +92,11 @@ impl ShimConfigLoader for MockConfigLoader {
             Ok(())
         }
     }
-    
+
     fn file_extension(&self) -> &str {
         "mock.toml"
     }
 }
-
-
-
-
 
 #[test]
 fn test_mock_config_loader() {

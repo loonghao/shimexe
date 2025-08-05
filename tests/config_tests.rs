@@ -1,8 +1,8 @@
+use shimexe_core::template::{ArgsConfig, ArgsMode};
 use shimexe_core::{
     AutoUpdate, ExtractedExecutable, ShimConfig, ShimCore, ShimMetadata, SourceType,
     UpdateProvider, VersionCheck,
 };
-use shimexe_core::template::{ArgsConfig, ArgsMode};
 use std::collections::HashMap;
 
 #[test]
@@ -100,7 +100,12 @@ args = []
 #[test]
 fn test_args_config_serialization() {
     let args_config = ArgsConfig {
-        template: Some(vec!["--debug".to_string(), "{args}".to_string(), "--output".to_string(), "result.txt".to_string()]),
+        template: Some(vec![
+            "--debug".to_string(),
+            "{args}".to_string(),
+            "--output".to_string(),
+            "result.txt".to_string(),
+        ]),
         inline: Some("--verbose {args}".to_string()),
         mode: ArgsMode::Template,
         default: vec!["--help".to_string()],
@@ -125,7 +130,11 @@ fn test_shim_metadata_full() {
         description: Some("A comprehensive test tool".to_string()),
         version: Some("2.1.0".to_string()),
         author: Some("Test Team <test@example.com>".to_string()),
-        tags: vec!["testing".to_string(), "cli".to_string(), "utility".to_string()],
+        tags: vec![
+            "testing".to_string(),
+            "cli".to_string(),
+            "utility".to_string(),
+        ],
     };
 
     let toml_str = toml::to_string(&metadata).unwrap();
@@ -160,9 +169,17 @@ fn test_auto_update_github_provider() {
     let deserialized: AutoUpdate = toml::from_str(&toml_str).unwrap();
 
     assert_eq!(deserialized.enabled, auto_update.enabled);
-    assert_eq!(deserialized.check_interval_hours, auto_update.check_interval_hours);
+    assert_eq!(
+        deserialized.check_interval_hours,
+        auto_update.check_interval_hours
+    );
 
-    if let UpdateProvider::Github { repo, asset_pattern, include_prerelease } = deserialized.provider {
+    if let UpdateProvider::Github {
+        repo,
+        asset_pattern,
+        include_prerelease,
+    } = deserialized.provider
+    {
         assert_eq!(repo, "owner/repository");
         assert_eq!(asset_pattern, "app-{version}-{platform}-{arch}.tar.gz");
         assert!(!include_prerelease);
@@ -193,13 +210,23 @@ fn test_auto_update_https_provider() {
     let toml_str = toml::to_string(&auto_update).unwrap();
     let deserialized: AutoUpdate = toml::from_str(&toml_str).unwrap();
 
-    assert!(matches!(deserialized.version_check, VersionCheck::Http { .. }));
+    assert!(matches!(
+        deserialized.version_check,
+        VersionCheck::Http { .. }
+    ));
     assert!(deserialized.pre_update_command.is_none());
     assert!(deserialized.post_update_command.is_none());
 
-    if let UpdateProvider::Https { base_url, version_url } = deserialized.provider {
+    if let UpdateProvider::Https {
+        base_url,
+        version_url,
+    } = deserialized.provider
+    {
         assert_eq!(base_url, "https://releases.example.com");
-        assert_eq!(version_url, Some("https://releases.example.com/latest".to_string()));
+        assert_eq!(
+            version_url,
+            Some("https://releases.example.com/latest".to_string())
+        );
     } else {
         panic!("Expected Https provider");
     }
@@ -229,7 +256,11 @@ fn test_auto_update_custom_provider() {
     assert!(!deserialized.enabled);
     assert_eq!(deserialized.check_interval_hours, 2);
 
-    if let UpdateProvider::Custom { update_command, version_command } = deserialized.provider {
+    if let UpdateProvider::Custom {
+        update_command,
+        version_command,
+    } = deserialized.provider
+    {
         assert_eq!(update_command, "custom-updater --install {version}");
         assert_eq!(version_command, "custom-checker --latest");
     } else {
@@ -249,7 +280,10 @@ fn test_complete_config_serialization() {
     let mut env_vars = HashMap::new();
     env_vars.insert("APP_ENV".to_string(), "production".to_string());
     env_vars.insert("LOG_LEVEL".to_string(), "info".to_string());
-    env_vars.insert("CONFIG_PATH".to_string(), "/etc/myapp/config.json".to_string());
+    env_vars.insert(
+        "CONFIG_PATH".to_string(),
+        "/etc/myapp/config.json".to_string(),
+    );
 
     let config = ShimConfig {
         shim: ShimCore {
