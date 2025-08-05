@@ -1,6 +1,6 @@
-use shimexe_core::manager::{ShimInfo, ShimManager};
 use shimexe_core::config::{ShimConfig, ShimCore, ShimMetadata, SourceType};
 use shimexe_core::error::ShimError;
+use shimexe_core::manager::{ShimInfo, ShimManager};
 use std::collections::HashMap;
 use tempfile::TempDir;
 
@@ -37,7 +37,7 @@ fn create_test_config(name: &str) -> ShimConfig {
 fn test_shim_manager_creation() {
     let temp_dir = TempDir::new().unwrap();
     let manager = ShimManager::new(temp_dir.path().to_path_buf()).unwrap();
-    
+
     assert_eq!(manager.shim_dir, temp_dir.path());
     assert!(manager.metadata_dir.is_none());
     assert!(temp_dir.path().exists());
@@ -48,9 +48,9 @@ fn test_shim_manager_with_metadata_dir() {
     let temp_dir = TempDir::new().unwrap();
     let shim_dir = temp_dir.path().join("shims");
     let metadata_dir = temp_dir.path().join("metadata");
-    
+
     let manager = ShimManager::with_metadata_dir(shim_dir.clone(), metadata_dir.clone()).unwrap();
-    
+
     assert_eq!(manager.shim_dir, shim_dir);
     assert_eq!(manager.metadata_dir, Some(metadata_dir.clone()));
     assert!(shim_dir.exists());
@@ -61,12 +61,17 @@ fn test_shim_manager_with_metadata_dir() {
 fn test_create_shim() {
     let (manager, _temp_dir) = create_test_manager();
     let config = create_test_config("test-shim");
-    
+
     let shim_path = manager.create_shim(config).unwrap();
-    
+
     assert!(shim_path.exists());
-    assert!(shim_path.file_name().unwrap().to_str().unwrap().contains("test-shim"));
-    
+    assert!(shim_path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .contains("test-shim"));
+
     // Verify the config file was created
     let config_path = manager.shim_dir.join("test-shim.shim.toml");
     assert!(config_path.exists());
@@ -89,18 +94,18 @@ fn test_create_duplicate_shim() {
 #[test]
 fn test_list_shims() {
     let (manager, _temp_dir) = create_test_manager();
-    
+
     // Initially empty
     let shims = manager.list_shims().unwrap();
     assert!(shims.is_empty());
-    
+
     // Create some shims
     manager.create_shim(create_test_config("shim1")).unwrap();
     manager.create_shim(create_test_config("shim2")).unwrap();
-    
+
     let shims = manager.list_shims().unwrap();
     assert_eq!(shims.len(), 2);
-    
+
     let names: Vec<String> = shims.iter().map(|s| s.name.clone()).collect();
     assert!(names.contains(&"shim1".to_string()));
     assert!(names.contains(&"shim2".to_string()));
@@ -110,16 +115,16 @@ fn test_list_shims() {
 fn test_get_shim() {
     let (manager, _temp_dir) = create_test_manager();
     let config = create_test_config("get-test");
-    
+
     // Non-existent shim
     let result = manager.get_shim("non-existent").unwrap();
     assert!(result.is_none());
-    
+
     // Create and get shim
     manager.create_shim(config).unwrap();
     let shim_info = manager.get_shim("get-test").unwrap();
     assert!(shim_info.is_some());
-    
+
     let info = shim_info.unwrap();
     assert_eq!(info.name, "get-test");
     assert_eq!(info.path, "echo");
@@ -145,18 +150,18 @@ fn test_get_shim_info() {
 fn test_remove_shim() {
     let (manager, _temp_dir) = create_test_manager();
     let config = create_test_config("remove-test");
-    
+
     // Create shim
     let shim_path = manager.create_shim(config).unwrap();
     assert!(shim_path.exists());
-    
+
     // Remove shim
     manager.remove_shim("remove-test").unwrap();
-    
+
     // Verify removal
     let result = manager.get_shim("remove-test").unwrap();
     assert!(result.is_none());
-    
+
     let config_path = manager.shim_dir.join("remove-test.shim.toml");
     assert!(!config_path.exists());
 }
@@ -174,19 +179,19 @@ fn test_remove_non_existent_shim() {
 fn test_update_shim() {
     let (manager, _temp_dir) = create_test_manager();
     let original_config = create_test_config("update-test");
-    
+
     // Create original shim
     manager.create_shim(original_config).unwrap();
-    
+
     // Create updated config
     let mut updated_config = create_test_config("update-test");
     updated_config.shim.args = vec!["updated".to_string()];
     updated_config.metadata.description = Some("Updated description".to_string());
-    
+
     // Update shim
     let updated_path = manager.update_shim("update-test", updated_config).unwrap();
     assert!(updated_path.exists());
-    
+
     // Verify update by getting shim info
     let shim_info = manager.get_shim("update-test").unwrap();
     assert!(shim_info.is_some());
@@ -199,7 +204,7 @@ fn test_update_shim() {
 fn test_update_non_existent_shim() {
     let (manager, _temp_dir) = create_test_manager();
     let config = create_test_config("non-existent");
-    
+
     let result = manager.update_shim("non-existent", config);
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), ShimError::Config(_)));
@@ -222,7 +227,7 @@ fn test_execute_shim_creation() {
 #[test]
 fn test_execute_non_existent_shim() {
     let (manager, _temp_dir) = create_test_manager();
-    
+
     let result = manager.execute_shim("non-existent", &[]);
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), ShimError::Config(_)));
@@ -248,7 +253,10 @@ fn test_shim_builder() {
     assert_eq!(config.shim.name, "builder-test");
     assert_eq!(config.shim.path, "test-exe");
     assert_eq!(config.shim.args, vec!["arg1", "arg2"]);
-    assert_eq!(config.metadata.description, Some("Builder test shim".to_string()));
+    assert_eq!(
+        config.metadata.description,
+        Some("Builder test shim".to_string())
+    );
     assert_eq!(config.metadata.version, Some("2.0.0".to_string()));
     assert_eq!(config.metadata.author, Some("Builder Author".to_string()));
     assert_eq!(config.metadata.tags, vec!["builder", "test"]);
@@ -258,7 +266,8 @@ fn test_shim_builder() {
 fn test_shim_builder_with_env() {
     let (manager, _temp_dir) = create_test_manager();
 
-    let config = manager.builder("env-test")
+    let config = manager
+        .builder("env-test")
         .path("test-exe")
         .env("TEST_VAR", "test_value")
         .env("PATH_VAR", "/test/path")
@@ -273,7 +282,8 @@ fn test_shim_builder_with_env() {
 fn test_shim_builder_with_cwd() {
     let (manager, _temp_dir) = create_test_manager();
 
-    let config = manager.builder("cwd-test")
+    let config = manager
+        .builder("cwd-test")
         .path("test-exe")
         .cwd("/test/directory")
         .build()
