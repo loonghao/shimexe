@@ -1,6 +1,10 @@
 use shimexe_core::utils::*;
+use shimexe_core::error::ShimError;
 use std::collections::HashMap;
 use std::env;
+use std::fs;
+use std::path::Path;
+use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_expand_env_vars_basic() {
@@ -220,4 +224,179 @@ fn test_expand_env_vars_edge_cases() {
     assert_eq!(result, "start_middle_end");
     env::remove_var("START_VAR");
     env::remove_var("END_VAR");
+}
+
+#[test]
+fn test_normalize_path_basic() {
+    let path = "test/path/to/file";
+    let normalized = normalize_path(path);
+
+    #[cfg(windows)]
+    assert_eq!(normalized, "test\\path\\to\\file");
+    #[cfg(not(windows))]
+    assert_eq!(normalized, "test/path/to/file");
+}
+
+#[test]
+fn test_normalize_path_with_backslashes() {
+    let path = "test\\path\\to\\file";
+    let normalized = normalize_path(path);
+
+    #[cfg(windows)]
+    assert_eq!(normalized, "test\\path\\to\\file");
+    #[cfg(not(windows))]
+    assert_eq!(normalized, "test/path/to/file");
+}
+
+#[test]
+fn test_normalize_path_mixed_separators() {
+    let path = "test/path\\to/file";
+    let normalized = normalize_path(path);
+
+    #[cfg(windows)]
+    assert_eq!(normalized, "test\\path\\to\\file");
+    #[cfg(not(windows))]
+    assert_eq!(normalized, "test/path/to/file");
+}
+
+#[test]
+fn test_normalize_path_empty() {
+    let normalized = normalize_path("");
+    assert_eq!(normalized, "");
+}
+
+#[test]
+fn test_validate_shim_name_valid() {
+    let valid_names = vec![
+        "test",
+        "test-shim",
+        "test_shim",
+        "test123",
+        "Test",
+        "TEST",
+        "a",
+        "my-awesome-tool",
+        "tool_v2",
+    ];
+
+    for name in valid_names {
+        assert!(validate_shim_name(name).is_ok(), "Name '{}' should be valid", name);
+    }
+}
+
+#[test]
+fn test_validate_shim_name_invalid() {
+    let invalid_names = vec![
+        "",           // Empty
+        " ",          // Whitespace only
+        "test shim",  // Contains space
+        "test/shim",  // Contains slash
+        "test\\shim", // Contains backslash
+        "test:shim",  // Contains colon
+        "test*shim",  // Contains asterisk
+        "test?shim",  // Contains question mark
+        "test\"shim", // Contains quote
+        "test<shim",  // Contains less than
+        "test>shim",  // Contains greater than
+        "test|shim",  // Contains pipe
+        ".test",      // Starts with dot
+        "test.",      // Ends with dot
+        "CON",        // Reserved Windows name
+        "PRN",        // Reserved Windows name
+        "AUX",        // Reserved Windows name
+        "NUL",        // Reserved Windows name
+        "COM1",       // Reserved Windows name
+        "LPT1",       // Reserved Windows name
+    ];
+
+    for name in invalid_names {
+        assert!(validate_shim_name(name).is_err(), "Name '{}' should be invalid", name);
+    }
+}
+
+#[test]
+fn test_get_platform() {
+    let platform = get_platform();
+
+    #[cfg(target_os = "windows")]
+    assert_eq!(platform, "windows");
+
+    #[cfg(target_os = "macos")]
+    assert_eq!(platform, "macos");
+
+    #[cfg(target_os = "linux")]
+    assert_eq!(platform, "linux");
+
+    // Should always return a non-empty string
+    assert!(!platform.is_empty());
+}
+
+#[test]
+fn test_get_architecture() {
+    let arch = get_architecture();
+
+    #[cfg(target_arch = "x86_64")]
+    assert_eq!(arch, "x86_64");
+
+    #[cfg(target_arch = "x86")]
+    assert_eq!(arch, "x86");
+
+    #[cfg(target_arch = "aarch64")]
+    assert_eq!(arch, "aarch64");
+
+    // Should always return a non-empty string
+    assert!(!arch.is_empty());
+}
+
+#[test]
+fn test_resolve_executable_path_absolute() {
+    let temp_dir = TempDir::new().unwrap();
+    let exe_path = temp_dir.path().join("test.exe");
+    fs::write(&exe_path, "test").unwrap();
+
+    let resolved = resolve_executable_path(&exe_path.to_string_lossy()).unwrap();
+    assert_eq!(resolved, exe_path);
+}
+
+#[test]
+fn test_resolve_executable_path_in_path() {
+    // Test with a command that should be in PATH
+    #[cfg(windows)]
+    let result = resolve_executable_path("cmd");
+    #[cfg(not(windows))]
+    let result = resolve_executable_path("sh");
+
+    assert!(result.is_ok());
+    let resolved = result.unwrap();
+    assert!(resolved.exists());
+}
+
+#[test]
+fn test_resolve_executable_path_not_found() {
+    let result = resolve_executable_path("nonexistent_executable_12345");
+    assert!(result.is_err());
+    assert!(matches!(result.unwrap_err(), ShimError::ExecutableNotFound(_)));
+}
+
+#[test]
+fn test_extract_archive_unsupported() {
+    let temp_dir = TempDir::new().unwrap();
+    let archive_path = temp_dir.path().join("test.unsupported");
+    let extract_dir = temp_dir.path().join("extract");
+
+    fs::write(&archive_path, "fake archive").unwrap();
+
+    let result = extract_archive(&archive_path, &extract_dir);
+    assert!(result.is_err());
+    // Should return an error for unsupported archive types
+}
+
+#[test]
+fn test_extract_archive_nonexistent() {
+    let temp_dir = TempDir::new().unwrap();
+    let archive_path = temp_dir.path().join("nonexistent.zip");
+    let extract_dir = temp_dir.path().join("extract");
+
+    let result = extract_archive(&archive_path, &extract_dir);
+    assert!(result.is_err());
 }
