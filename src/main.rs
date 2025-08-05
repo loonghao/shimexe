@@ -26,6 +26,10 @@ struct Cli {
     /// Shim directory (defaults to ~/.shimexe/shims)
     #[arg(long, global = true)]
     shim_dir: Option<PathBuf>,
+
+    /// Show detailed version and system information
+    #[arg(long)]
+    info: bool,
 }
 
 #[derive(Subcommand)]
@@ -84,6 +88,12 @@ async fn main() -> Result<()> {
             shimexe_level, turbo_cdn_level
         ))
         .init();
+
+    // Handle --info flag
+    if cli.info {
+        print_system_info();
+        return Ok(());
+    }
 
     // Run as main CLI
     match cli.command {
@@ -154,4 +164,28 @@ fn get_shim_directory(custom_dir: Option<PathBuf>) -> Result<PathBuf> {
     }
 
     Ok(shim_dir)
+}
+
+/// Print detailed system and version information
+fn print_system_info() {
+    println!("shimexe {}", env!("CARGO_PKG_VERSION"));
+    println!("Build Information:");
+    println!("  Target: {}", env!("TARGET"));
+    println!("  Rust Version: {}", env!("RUSTC_VERSION"));
+    println!("  Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
+
+    println!("\nSystem Information:");
+    println!("  OS: {}", std::env::consts::OS);
+    println!("  Architecture: {}", std::env::consts::ARCH);
+    println!("  Family: {}", std::env::consts::FAMILY);
+
+    if let Ok(current_exe) = env::current_exe() {
+        println!("  Executable: {}", current_exe.display());
+    }
+
+    if let Some(home_dir) = dirs::home_dir() {
+        let shimexe_dir = home_dir.join(".shimexe");
+        println!("  Shimexe Directory: {}", shimexe_dir.display());
+        println!("  Directory Exists: {}", shimexe_dir.exists());
+    }
 }
