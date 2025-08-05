@@ -252,6 +252,8 @@ $env:PATH = "$env:USERPROFILE\.shimexe;$env:PATH"
 
 ## 🚀 Quick Start
 
+> **🔧 CI/CD Improvement**: Release automation has been enhanced with proper release-please configuration for better reliability and streamlined package management.
+
 <div align="center">
 
 ### **Get Started in 30 Seconds!**
