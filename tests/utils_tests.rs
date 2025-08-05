@@ -1,5 +1,4 @@
 use shimexe_core::utils::*;
-use shimexe_core::error::ShimError;
 use std::collections::HashMap;
 use std::env;
 

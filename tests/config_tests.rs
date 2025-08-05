@@ -1,10 +1,9 @@
 use shimexe_core::{
-    ArgsConfig, AutoUpdate, ExtractedExecutable, ShimConfig, ShimCore, ShimMetadata, SourceType,
+    AutoUpdate, ExtractedExecutable, ShimConfig, ShimCore, ShimMetadata, SourceType,
     UpdateProvider, VersionCheck,
 };
+use shimexe_core::template::{ArgsConfig, ArgsMode};
 use std::collections::HashMap;
-use tempfile::NamedTempFile;
-use std::fs;
 
 #[test]
 fn test_archive_config_serialization() {
@@ -101,17 +100,23 @@ args = []
 #[test]
 fn test_args_config_serialization() {
     let args_config = ArgsConfig {
-        pass_through: true,
-        prepend: vec!["--debug".to_string(), "--verbose".to_string()],
-        append: vec!["--output".to_string(), "result.txt".to_string()],
+        template: Some(vec!["--debug".to_string(), "{args}".to_string(), "--output".to_string(), "result.txt".to_string()]),
+        inline: Some("--verbose {args}".to_string()),
+        mode: ArgsMode::Template,
+        default: vec!["--help".to_string()],
+        prefix: vec!["--prefix".to_string()],
+        suffix: vec!["--suffix".to_string()],
     };
 
     let toml_str = toml::to_string(&args_config).unwrap();
     let deserialized: ArgsConfig = toml::from_str(&toml_str).unwrap();
 
-    assert_eq!(deserialized.pass_through, args_config.pass_through);
-    assert_eq!(deserialized.prepend, args_config.prepend);
-    assert_eq!(deserialized.append, args_config.append);
+    assert_eq!(deserialized.template, args_config.template);
+    assert_eq!(deserialized.inline, args_config.inline);
+    assert_eq!(deserialized.mode, args_config.mode);
+    assert_eq!(deserialized.default, args_config.default);
+    assert_eq!(deserialized.prefix, args_config.prefix);
+    assert_eq!(deserialized.suffix, args_config.suffix);
 }
 
 #[test]
@@ -136,29 +141,31 @@ fn test_shim_metadata_full() {
 fn test_auto_update_github_provider() {
     let auto_update = AutoUpdate {
         enabled: true,
-        check_interval: 86400, // 24 hours
         provider: UpdateProvider::Github {
             repo: "owner/repository".to_string(),
             asset_pattern: "app-{version}-{platform}-{arch}.tar.gz".to_string(),
-            pre_release: false,
+            include_prerelease: false,
         },
-        version_check: VersionCheck::Semantic,
+        download_url: "https://github.com/owner/repository/releases/download/v{version}/app-{version}-{platform}-{arch}.tar.gz".to_string(),
+        version_check: VersionCheck::GithubLatest {
+            repo: "owner/repository".to_string(),
+            include_prerelease: false,
+        },
+        check_interval_hours: 24,
         pre_update_command: Some("echo 'Starting update'".to_string()),
         post_update_command: Some("echo 'Update completed'".to_string()),
-        backup_count: 5,
     };
 
     let toml_str = toml::to_string(&auto_update).unwrap();
     let deserialized: AutoUpdate = toml::from_str(&toml_str).unwrap();
 
     assert_eq!(deserialized.enabled, auto_update.enabled);
-    assert_eq!(deserialized.check_interval, auto_update.check_interval);
-    assert_eq!(deserialized.backup_count, auto_update.backup_count);
+    assert_eq!(deserialized.check_interval_hours, auto_update.check_interval_hours);
 
-    if let UpdateProvider::Github { repo, asset_pattern, pre_release } = deserialized.provider {
+    if let UpdateProvider::Github { repo, asset_pattern, include_prerelease } = deserialized.provider {
         assert_eq!(repo, "owner/repository");
         assert_eq!(asset_pattern, "app-{version}-{platform}-{arch}.tar.gz");
-        assert!(!pre_release);
+        assert!(!include_prerelease);
     } else {
         panic!("Expected Github provider");
     }
@@ -168,27 +175,31 @@ fn test_auto_update_github_provider() {
 fn test_auto_update_https_provider() {
     let auto_update = AutoUpdate {
         enabled: true,
-        check_interval: 3600, // 1 hour
         provider: UpdateProvider::Https {
             base_url: "https://releases.example.com".to_string(),
-            url_pattern: "{base_url}/v{version}/app-{platform}.zip".to_string(),
+            version_url: Some("https://releases.example.com/latest".to_string()),
         },
-        version_check: VersionCheck::Timestamp,
+        download_url: "https://releases.example.com/v{version}/app-{platform}.zip".to_string(),
+        version_check: VersionCheck::Http {
+            url: "https://releases.example.com/latest".to_string(),
+            json_path: Some("version".to_string()),
+            regex_pattern: None,
+        },
+        check_interval_hours: 1,
         pre_update_command: None,
         post_update_command: None,
-        backup_count: 3,
     };
 
     let toml_str = toml::to_string(&auto_update).unwrap();
     let deserialized: AutoUpdate = toml::from_str(&toml_str).unwrap();
 
-    assert!(matches!(deserialized.version_check, VersionCheck::Timestamp));
+    assert!(matches!(deserialized.version_check, VersionCheck::Http { .. }));
     assert!(deserialized.pre_update_command.is_none());
     assert!(deserialized.post_update_command.is_none());
 
-    if let UpdateProvider::Https { base_url, url_pattern } = deserialized.provider {
+    if let UpdateProvider::Https { base_url, version_url } = deserialized.provider {
         assert_eq!(base_url, "https://releases.example.com");
-        assert_eq!(url_pattern, "{base_url}/v{version}/app-{platform}.zip");
+        assert_eq!(version_url, Some("https://releases.example.com/latest".to_string()));
     } else {
         panic!("Expected Https provider");
     }
@@ -198,34 +209,38 @@ fn test_auto_update_https_provider() {
 fn test_auto_update_custom_provider() {
     let auto_update = AutoUpdate {
         enabled: false,
-        check_interval: 7200, // 2 hours
         provider: UpdateProvider::Custom {
             update_command: "custom-updater --install {version}".to_string(),
-            check_command: "custom-checker --latest".to_string(),
+            version_command: "custom-checker --latest".to_string(),
         },
-        version_check: VersionCheck::Custom("build-{timestamp}".to_string()),
+        download_url: "https://custom.example.com/download/{version}".to_string(),
+        version_check: VersionCheck::Command {
+            command: "custom-checker".to_string(),
+            args: vec!["--latest".to_string()],
+        },
+        check_interval_hours: 2,
         pre_update_command: Some("systemctl stop myapp".to_string()),
         post_update_command: Some("systemctl start myapp".to_string()),
-        backup_count: 10,
     };
 
     let toml_str = toml::to_string(&auto_update).unwrap();
     let deserialized: AutoUpdate = toml::from_str(&toml_str).unwrap();
 
     assert!(!deserialized.enabled);
-    assert_eq!(deserialized.backup_count, 10);
+    assert_eq!(deserialized.check_interval_hours, 2);
 
-    if let UpdateProvider::Custom { update_command, check_command } = deserialized.provider {
+    if let UpdateProvider::Custom { update_command, version_command } = deserialized.provider {
         assert_eq!(update_command, "custom-updater --install {version}");
-        assert_eq!(check_command, "custom-checker --latest");
+        assert_eq!(version_command, "custom-checker --latest");
     } else {
         panic!("Expected Custom provider");
     }
 
-    if let VersionCheck::Custom(pattern) = deserialized.version_check {
-        assert_eq!(pattern, "build-{timestamp}");
+    if let VersionCheck::Command { command, args } = deserialized.version_check {
+        assert_eq!(command, "custom-checker");
+        assert_eq!(args, vec!["--latest"]);
     } else {
-        panic!("Expected Custom version check");
+        panic!("Expected Command version check");
     }
 }
 
@@ -260,9 +275,12 @@ fn test_complete_config_serialization() {
             ],
         },
         args: ArgsConfig {
-            pass_through: true,
-            prepend: vec!["--global-config".to_string()],
-            append: vec!["--log-format".to_string(), "json".to_string()],
+            template: Some(vec!["--global-config".to_string(), "{args}".to_string(), "--log-format".to_string(), "json".to_string()]),
+            inline: Some("--verbose {args}".to_string()),
+            mode: ArgsMode::Template,
+            default: vec![],
+            prefix: vec!["--prefix".to_string()],
+            suffix: vec!["--suffix".to_string()],
         },
         env: env_vars,
         metadata: ShimMetadata {
@@ -273,16 +291,19 @@ fn test_complete_config_serialization() {
         },
         auto_update: Some(AutoUpdate {
             enabled: true,
-            check_interval: 43200, // 12 hours
             provider: UpdateProvider::Github {
                 repo: "mycompany/myapp".to_string(),
                 asset_pattern: "myapp-{version}-{platform}-{arch}.tar.gz".to_string(),
-                pre_release: false,
+                include_prerelease: false,
             },
-            version_check: VersionCheck::Semantic,
+            download_url: "https://github.com/mycompany/myapp/releases/download/v{version}/myapp-{version}-{platform}-{arch}.tar.gz".to_string(),
+            version_check: VersionCheck::GithubLatest {
+                repo: "mycompany/myapp".to_string(),
+                include_prerelease: false,
+            },
+            check_interval_hours: 12,
             pre_update_command: Some("echo 'Preparing for update'".to_string()),
             post_update_command: Some("echo 'Update completed successfully'".to_string()),
-            backup_count: 5,
         }),
     };
 
@@ -298,7 +319,7 @@ fn test_complete_config_serialization() {
     assert_eq!(deserialized.shim.download_url, config.shim.download_url);
     assert_eq!(deserialized.shim.source_type, config.shim.source_type);
     assert_eq!(deserialized.shim.extracted_executables.len(), 2);
-    assert_eq!(deserialized.args.pass_through, config.args.pass_through);
+    assert_eq!(deserialized.args.template, config.args.template);
     assert_eq!(deserialized.env.len(), 3);
     assert_eq!(deserialized.metadata.tags.len(), 3);
     assert!(deserialized.auto_update.is_some());
