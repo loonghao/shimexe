@@ -97,6 +97,7 @@ jobs:
           tar: all
           zip: windows
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: refs/tags/${{ needs.release-please.outputs.tag_name }}
 
   publish-packages:
     name: Publish to package managers
