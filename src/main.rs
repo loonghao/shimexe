@@ -170,9 +170,42 @@ fn get_shim_directory(custom_dir: Option<PathBuf>) -> Result<PathBuf> {
 fn print_system_info() {
     println!("shimexe {}", env!("CARGO_PKG_VERSION"));
     println!("Build Information:");
-    println!("  Target: {}", env!("TARGET"));
-    println!("  Rust Version: {}", env!("RUSTC_VERSION"));
-    println!("  Build Profile: {}", if cfg!(debug_assertions) { "debug" } else { "release" });
+
+    // Prefer runtime environment for TARGET; fall back to arch-os if missing
+    let target = std::env::var("TARGET")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS));
+
+    // Prefer runtime environment for RUSTC_VERSION; fall back to `rustc -V` then "unknown"
+    let rustc_version = std::env::var("RUSTC_VERSION")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            std::process::Command::new("rustc")
+                .arg("-V")
+                .output()
+                .ok()
+                .and_then(|o| {
+                    if o.status.success() {
+                        Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+                    } else {
+                        None
+                    }
+                })
+        })
+        .unwrap_or_else(|| "unknown".to_string());
+
+    println!("  Target: {}", target);
+    println!("  Rust Version: {}", rustc_version);
+    println!(
+        "  Build Profile: {}",
+        if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        }
+    );
 
     println!("\nSystem Information:");
     println!("  OS: {}", std::env::consts::OS);
