@@ -127,3 +127,32 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
+
+  # Release-please dry-run validation (PR only)
+  release_please_check:
+    name: Release Please Dry Run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for release-please CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install release-please CLI
+        run: |
+          npm install -g release-please
+
+      - name: Validate release-please configuration (dry-run)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release-please manifest \
+            --token=${GITHUB_TOKEN} \
+            --config-file=release-please-config.json \
+            --manifest-file=.release-please-manifest.json \
+            --dry-run
+
