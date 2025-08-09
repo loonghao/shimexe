@@ -3,6 +3,8 @@
   "bootstrap-sha": "cea8746",
   "include-v-in-tag": true,
 
+  "pull-request-title-pattern": "chore${scope}: release${component} ${version}",
+
   "packages": {
     ".": {
       "package-name": "shimexe",
