@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.7](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.5.6...shimexe-core-v0.5.7) (2025-08-10)
+
+
+### Performance Improvements
+
+* **core:** remove unused file_modified from cache entry; trust cached value within TTL to avoid fs IO; fix -D dead-code ([5f5f77d](https://github.com/loonghao/shimexe/commit/5f5f77da7e9bf69d861c38cd1da705586b727c08))
+
 ## [0.5.6](https://github.com/loonghao/shimexe/compare/shimexe-core-v0.5.5...shimexe-core-v0.5.6) (2025-08-05)
 
 

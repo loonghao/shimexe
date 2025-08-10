@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.5.9](https://github.com/loonghao/shimexe/compare/v0.5.8...v0.5.9) (2025-08-10)
+
+
+### Bug Fixes
+
+* **ci:** cleanup stale 'autorelease: pending' labels before running release-please ([fa5199c](https://github.com/loonghao/shimexe/commit/fa5199c8bf68f631d6c83b96a504e1870119a70a))
+* **ci:** remove cargo-workspace plugin; rely on explicit packages mapping for root autobump ([0a61989](https://github.com/loonghao/shimexe/commit/0a619894410d7dacac47081a1a785efea69e9828))
+* **ci:** set release-please PR title pattern to include scope/component/version ([8816990](https://github.com/loonghao/shimexe/commit/8816990c98c0411309ddc8bfef6c208c6ff1e6b5))
+* **workflows:** resolve YAML errors and move package managers update under release-assets; add actionlint; make coverage non-blocking ([9f72088](https://github.com/loonghao/shimexe/commit/9f72088fcf154a8a5db2cb48aa4d3d56726159b4))
+
+
+### Performance Improvements
+
+* **core:** remove unused file_modified from cache entry; trust cached value within TTL to avoid fs IO; fix -D dead-code ([5f5f77d](https://github.com/loonghao/shimexe/commit/5f5f77da7e9bf69d861c38cd1da705586b727c08))
+
 ## [0.5.8](https://github.com/loonghao/shimexe/compare/v0.5.7...v0.5.8) (2025-08-08)
 
 
