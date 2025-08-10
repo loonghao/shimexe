@@ -100,12 +100,14 @@ jobs:
           LINUX_X64_HASH=$(get_hash "shimexe-${{ steps.version.outputs.version }}-x86_64-unknown-linux-gnu.tar.xz")
           LINUX_ARM64_HASH=$(get_hash "shimexe-${{ steps.version.outputs.version }}-aarch64-unknown-linux-gnu.tar.xz")
 
-          echo "win_x64_hash=$WIN_X64_HASH" >> "$GITHUB_OUTPUT"
-          echo "win_arm64_hash=$WIN_ARM64_HASH" >> "$GITHUB_OUTPUT"
-          echo "mac_x64_hash=$MAC_X64_HASH" >> "$GITHUB_OUTPUT"
-          echo "mac_arm64_hash=$MAC_ARM64_HASH" >> "$GITHUB_OUTPUT"
-          echo "linux_x64_hash=$LINUX_X64_HASH" >> "$GITHUB_OUTPUT"
-          echo "linux_arm64_hash=$LINUX_ARM64_HASH" >> "$GITHUB_OUTPUT"
+          {
+            echo "win_x64_hash=$WIN_X64_HASH"
+            echo "win_arm64_hash=$WIN_ARM64_HASH"
+            echo "mac_x64_hash=$MAC_X64_HASH"
+            echo "mac_arm64_hash=$MAC_ARM64_HASH"
+            echo "linux_x64_hash=$LINUX_X64_HASH"
+            echo "linux_arm64_hash=$LINUX_ARM64_HASH"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Update Scoop bucket
         env:
