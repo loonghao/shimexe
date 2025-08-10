@@ -15,7 +15,6 @@ use crate::utils::get_builtin_env_vars;
 struct ValidationCacheEntry {
     is_valid: bool,
     last_checked: SystemTime,
-    file_modified: SystemTime,
 }
 
 /// Performance cache for executable validation
@@ -43,14 +42,8 @@ impl ExecutableCache {
                     .unwrap_or(Duration::MAX)
                     < self.ttl
                 {
-                    // Check if file hasn't been modified
-                    if let Ok(metadata) = std::fs::metadata(path) {
-                        if let Ok(modified) = metadata.modified() {
-                            if modified <= entry.file_modified {
-                                return Some(entry.is_valid);
-                            }
-                        }
-                    }
+                    // Within TTL, trust cached value without extra filesystem checks
+                    return Some(entry.is_valid);
                 }
             }
         }
@@ -59,9 +52,6 @@ impl ExecutableCache {
 
     fn set_valid(&self, path: &Path, is_valid: bool) {
         let now = SystemTime::now();
-        let file_modified = std::fs::metadata(path)
-            .and_then(|m| m.modified())
-            .unwrap_or(now);
 
         if let Ok(mut cache) = self.cache.lock() {
             cache.insert(
@@ -69,7 +59,6 @@ impl ExecutableCache {
                 ValidationCacheEntry {
                     is_valid,
                     last_checked: now,
-                    file_modified,
                 },
             );
         }
