@@ -183,8 +183,8 @@ impl TemplateEngine {
             return self.evaluate_if_condition(expr);
         }
 
-        // Handle function calls
-        if expr.contains("()") {
+        // Handle function calls like name(...) with optional arguments
+        if expr.contains('(') && expr.ends_with(')') {
             return self.evaluate_function_call(expr);
         }
 
