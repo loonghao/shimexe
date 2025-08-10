@@ -30,4 +30,3 @@ fn test_generate_shim_name_collision() {
     let name = ArchiveExtractor::generate_shim_name(Path::new("app.exe"), &existing);
     assert_eq!(name, "app-3");
 }
-

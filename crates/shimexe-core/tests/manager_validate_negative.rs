@@ -10,4 +10,3 @@ fn test_validate_shim_negative() {
     // No shim created -> validate_shim should return false without panic
     assert!(!mgr.validate_shim("nope").unwrap());
 }
-

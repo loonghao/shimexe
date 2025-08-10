@@ -47,4 +47,3 @@ fn test_get_executable_path_legacy_url_path() {
     let msg = format!("{}", err);
     assert!(msg.contains("Executable not found") || msg.contains("URL"));
 }
-
