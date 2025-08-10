@@ -2347,7 +2347,7 @@ dependencies = [
 
 [[package]]
 name = "shimexe"
-version = "0.5.12"
+version = "0.5.13"
 dependencies = [
  "anyhow",
  "clap",
