@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "shimexe"
-version = "0.5.9"
+version = "0.5.10"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -72,7 +72,7 @@ async-trait = "0.1"
 tempfile = "3.8"
 
 [dependencies]
-shimexe-core = { version = "0.5.9", path = "crates/shimexe-core" }
+shimexe-core = { version = "0.5.10", path = "crates/shimexe-core" }
 clap.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
