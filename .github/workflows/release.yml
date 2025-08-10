@@ -28,6 +28,28 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
       releases_created: ${{ steps.release.outputs.releases_created }}
     steps:
+      - name: Cleanup stale 'autorelease: pending' labels on merged PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const q = `repo:${owner}/${repo} label:\"autorelease: pending\" is:pr is:merged`;
+            const resp = await github.rest.search.issuesAndPullRequests({ q });
+            for (const pr of resp.data.items || []) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  name: 'autorelease: pending',
+                });
+                core.info(`Removed 'autorelease: pending' from #${pr.number}`);
+              } catch (e) {
+                core.warning(`Label cleanup failed for #${pr.number}: ${e.message}`);
+              }
+            }
       - uses: googleapis/release-please-action@v4
         id: release
         with:
