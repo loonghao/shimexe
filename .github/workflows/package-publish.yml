@@ -1,0 +1,79 @@
+name: Package Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-packages:
+    name: Publish to package managers
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from release
+        id: version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Setup Node.js (for jq)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Publish to Scoop/Homebrew (script)
+        run: |
+          chmod +x scripts/publish-packages.sh
+          ./scripts/publish-packages.sh \
+            --version "${{ steps.version.outputs.version }}" \
+            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --publish-scoop \
+            --scoop-bucket-repo "${{ vars.SCOOP_BUCKET_REPO }}" \
+            --publish-homebrew \
+            --homebrew-tap-repo "${{ vars.HOMEBREW_TAP_REPO }}"
+
+      - name: Update local package files (dry run + PR)
+        run: |
+          chmod +x scripts/publish-packages.sh
+          ./scripts/publish-packages.sh \
+            --version "${{ steps.version.outputs.version }}" \
+            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --dry-run
+
+      - name: Configure Git for PR creation
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create PR for package updates
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update package manifests to v${{ steps.version.outputs.version }}"
+          title: "chore: update package manifests to v${{ steps.version.outputs.version }}"
+          body: |
+            This PR updates the local package manifests with the new version and asset hashes.
+
+            Changes:
+            - Updated Scoop manifest with new version and hashes
+            - Updated Homebrew formula with new version and hashes
+            - Updated Chocolatey template with new version
+
+            This is an automated PR created after the release workflow.
+          branch: "update-packages-v${{ steps.version.outputs.version }}"
+          delete-branch: true
+          committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
