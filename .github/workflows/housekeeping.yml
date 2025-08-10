@@ -14,7 +14,7 @@ jobs:
   cleanup-autorelease-labels:
     runs-on: ubuntu-latest
     steps:
-      - name: Cleanup stale 'autorelease: pending' labels on merged PRs
+      - name: "Cleanup stale 'autorelease: pending' labels on merged PRs"
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

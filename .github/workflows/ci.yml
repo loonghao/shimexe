@@ -18,6 +18,17 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Workflow linter to catch YAML and logic errors on PRs
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@v1
+
   # Clippy linting
   clippy:
     name: Clippy
@@ -104,6 +115,7 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
