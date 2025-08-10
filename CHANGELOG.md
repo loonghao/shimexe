@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.5.14](https://github.com/loonghao/shimexe/compare/v0.5.13...v0.5.14) (2025-08-10)
+
+
+### Bug Fixes
+
+* unify workspace versioning and disable component-in-tag to reduce duplicate PRs ([46d1f90](https://github.com/loonghao/shimexe/commit/46d1f90f9fef2bc1f0fcdcdad5308da2ead79d5f))
+
 ## [0.5.13](https://github.com/loonghao/shimexe/compare/v0.5.12...v0.5.13) (2025-08-10)
 
 
