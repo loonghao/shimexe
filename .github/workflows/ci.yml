@@ -144,7 +144,7 @@ jobs:
           verbose: true
           flags: unittests
           name: codecov-umbrella
-          disable_default_path_fixes: true
+          # Using supported inputs only
           override_branch: ${{ github.head_ref || github.ref_name }}
           override_pr: ${{ github.event.pull_request.number }}
           override_commit: ${{ github.sha }}
