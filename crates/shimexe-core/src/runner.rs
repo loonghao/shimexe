@@ -43,14 +43,9 @@ impl ExecutableCache {
                     .unwrap_or(Duration::MAX)
                     < self.ttl
                 {
-                    // Check if file hasn't been modified
-                    if let Ok(metadata) = std::fs::metadata(path) {
-                        if let Ok(modified) = metadata.modified() {
-                            if modified <= entry.file_modified {
-                                return Some(entry.is_valid);
-                            }
-                        }
-                    }
+                    // Within TTL, trust cached value without extra filesystem checks
+                    // to minimize overhead on repeated validations.
+                    return Some(entry.is_valid);
                 }
             }
         }
