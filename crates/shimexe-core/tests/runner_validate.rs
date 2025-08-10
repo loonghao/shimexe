@@ -12,8 +12,11 @@ fn test_runner_validate_ok_and_cache() {
     {
         use std::os::unix::fs::PermissionsExt;
         let mut perms = std::fs::metadata(&exe).unwrap().permissions();
-        perms.set_mode(0o755);
+        perms.set_mode(0o777);
         std::fs::set_permissions(&exe, perms).unwrap();
+        // Ensure exec bit is actually set
+        let mode = std::fs::metadata(&exe).unwrap().permissions().mode();
+        assert!(mode & 0o111 != 0, "exec bit not set: mode={:#o}", mode);
     }
 
     let cfg = ShimConfig {
