@@ -14,14 +14,14 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - name: Cleanup stale 'autorelease: pending' labels on merged PRs
+      - name: "Cleanup stale autorelease: pending labels on merged PRs"
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const q = `repo:${owner}/${repo} label:\"autorelease: pending\" is:pr is:merged`;
+            const q = `repo:${owner}/${repo} label:"autorelease: pending" is:pr is:merged`;
             const resp = await github.rest.search.issuesAndPullRequests({ q });
             for (const pr of resp.data.items || []) {
               try {
@@ -29,7 +29,7 @@ jobs:
                   owner,
                   repo,
                   issue_number: pr.number,
-                  name: 'autorelease: pending',
+                  name: "autorelease: pending",
                 });
                 core.info(`Removed 'autorelease: pending' from #${pr.number}`);
               } catch (e) {
