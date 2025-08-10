@@ -20,4 +20,3 @@ fn test_args_default_with_prefix_suffix() {
     let out2 = engine2.process_args(&cfg).unwrap();
     assert_eq!(out2, vec!["--user"]);
 }
-

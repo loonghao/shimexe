@@ -21,4 +21,3 @@ fn test_file_exists_mixed_tokens() {
     let out = engine.process_args(&cfg).unwrap();
     assert_eq!(out, vec!["--check", "true", "false"]);
 }
-

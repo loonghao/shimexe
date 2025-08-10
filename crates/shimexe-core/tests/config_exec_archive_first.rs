@@ -20,8 +20,18 @@ fn test_archive_first_executable_when_no_primary() {
             download_url: None,
             source_type: SourceType::Archive,
             extracted_executables: vec![
-                ExtractedExecutable { name: "a".into(), path: "bin".into(), full_path: exe1.to_string_lossy().to_string(), is_primary: false },
-                ExtractedExecutable { name: "b".into(), path: "bin".into(), full_path: exe2.to_string_lossy().to_string(), is_primary: false },
+                ExtractedExecutable {
+                    name: "a".into(),
+                    path: "bin".into(),
+                    full_path: exe1.to_string_lossy().to_string(),
+                    is_primary: false,
+                },
+                ExtractedExecutable {
+                    name: "b".into(),
+                    path: "bin".into(),
+                    full_path: exe2.to_string_lossy().to_string(),
+                    is_primary: false,
+                },
             ],
         },
         args: Default::default(),
@@ -33,4 +43,3 @@ fn test_archive_first_executable_when_no_primary() {
     let p = cfg.get_executable_path().unwrap();
     assert_eq!(p, exe1); // first element chosen
 }
-

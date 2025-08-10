@@ -19,14 +19,22 @@ fn test_merge_env_vars_overrides() {
     let merged = merge_env_vars(&custom);
 
     // Custom overrides OS value
-    assert_eq!(merged.get("MERGE_TEST_OS").map(String::as_str), Some("custom_value"));
+    assert_eq!(
+        merged.get("MERGE_TEST_OS").map(String::as_str),
+        Some("custom_value")
+    );
     // Custom-only key present
-    assert_eq!(merged.get("CUSTOM_ONLY").map(String::as_str), Some("only_value"));
+    assert_eq!(
+        merged.get("CUSTOM_ONLY").map(String::as_str),
+        Some("only_value")
+    );
     // Builtin exists and can be overridden by custom
-    assert_eq!(merged.get("EXE_EXT").map(String::as_str), Some("override_ext"));
+    assert_eq!(
+        merged.get("EXE_EXT").map(String::as_str),
+        Some("override_ext")
+    );
 
     // Builtins should generally be present (PATH_SEP at least)
     let builtins = get_builtin_env_vars();
     assert!(builtins.contains_key("PATH_SEP"));
 }
-

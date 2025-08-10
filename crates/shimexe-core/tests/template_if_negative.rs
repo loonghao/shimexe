@@ -13,4 +13,3 @@ fn test_if_condition_negative() {
         .unwrap();
     assert_eq!(out, "cond=false");
 }
-
