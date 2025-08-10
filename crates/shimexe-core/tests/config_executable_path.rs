@@ -35,4 +35,3 @@ fn test_get_executable_path_archive_primary_ok() {
     let got = cfg.get_executable_path().unwrap();
     assert_eq!(got, exe_file);
 }
-

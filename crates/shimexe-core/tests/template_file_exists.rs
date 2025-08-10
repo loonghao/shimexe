@@ -14,4 +14,3 @@ fn test_template_file_exists_true() {
     let out = engine.render_template(&template).unwrap();
     assert_eq!(out.trim(), "exists true");
 }
-

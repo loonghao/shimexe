@@ -25,4 +25,3 @@ fn test_args_default_when_user_args_present() {
     let out = engine.process_args(&cfg).unwrap();
     assert_eq!(out, vec!["--help"]);
 }
-

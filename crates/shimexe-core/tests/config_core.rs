@@ -52,4 +52,3 @@ fn test_get_executable_path_archive_primary() {
 
     assert!(cfg.get_executable_path().is_err());
 }
-

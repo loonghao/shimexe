@@ -27,10 +27,22 @@ fn test_extract_filename_from_url() {
 
 #[test]
 fn test_extract_exe_name_from_filename() {
-    assert_eq!(Downloader::extract_exe_name_from_filename("tool.exe").as_deref(), Some("tool"));
-    assert_eq!(Downloader::extract_exe_name_from_filename("pkg.zip").as_deref(), Some("pkg"));
-    assert_eq!(Downloader::extract_exe_name_from_filename("bundle.tar.gz").as_deref(), Some("bundle"));
-    assert_eq!(Downloader::extract_exe_name_from_filename("unknown"), Some("unknown".to_string()));
+    assert_eq!(
+        Downloader::extract_exe_name_from_filename("tool.exe").as_deref(),
+        Some("tool")
+    );
+    assert_eq!(
+        Downloader::extract_exe_name_from_filename("pkg.zip").as_deref(),
+        Some("pkg")
+    );
+    assert_eq!(
+        Downloader::extract_exe_name_from_filename("bundle.tar.gz").as_deref(),
+        Some("bundle")
+    );
+    assert_eq!(
+        Downloader::extract_exe_name_from_filename("unknown"),
+        Some("unknown".to_string())
+    );
 }
 
 #[test]
@@ -42,9 +54,18 @@ fn test_generate_download_path() {
 
 #[test]
 fn test_infer_app_name_from_url() {
-    assert_eq!(Downloader::infer_app_name_from_url("https://host/app.exe").as_deref(), Some("app"));
-    assert_eq!(Downloader::infer_app_name_from_url("https://host/archive.zip").as_deref(), Some("archive"));
-    assert_eq!(Downloader::infer_app_name_from_url("https://host/dir/tool.tgz").as_deref(), Some("tool"));
+    assert_eq!(
+        Downloader::infer_app_name_from_url("https://host/app.exe").as_deref(),
+        Some("app")
+    );
+    assert_eq!(
+        Downloader::infer_app_name_from_url("https://host/archive.zip").as_deref(),
+        Some("archive")
+    );
+    assert_eq!(
+        Downloader::infer_app_name_from_url("https://host/dir/tool.tgz").as_deref(),
+        Some("tool")
+    );
 }
 
 #[test]
@@ -54,4 +75,3 @@ fn test_is_executable_file_extension_based() {
     // This test is intentionally minimal to keep it platform-neutral.
     let _ = Downloader::infer_app_name_from_url("https://host/thing.bin");
 }
-
