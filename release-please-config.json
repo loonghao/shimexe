@@ -1,8 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-
   "include-v-in-tag": true,
-
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore: release ${branch}",
+  "plugins": ["cargo-workspace"],
   "packages": {
     ".": {
       "package-name": "shimexe",
