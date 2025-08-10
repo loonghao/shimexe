@@ -123,6 +123,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure Codecov can find base commit to avoid "behind head" issues
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -142,6 +144,10 @@ jobs:
           verbose: true
           flags: unittests
           name: codecov-umbrella
+          disable_default_path_fixes: true
+          override_branch: ${{ github.head_ref || github.ref_name }}
+          override_pr: ${{ github.event.pull_request.number }}
+          override_commit: ${{ github.sha }}
 
 
   # Release-please dry-run validation (PR only)
