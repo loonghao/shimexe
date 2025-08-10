@@ -1,6 +1,6 @@
 [package]
 name = "shimexe-core"
-version = "0.5.13"
+version = "0.5.14"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
