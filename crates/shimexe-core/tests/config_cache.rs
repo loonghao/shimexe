@@ -47,4 +47,3 @@ fn test_cache_hit_and_invalidate() {
     assert!(total >= 1);
     assert!(valid <= total);
 }
-

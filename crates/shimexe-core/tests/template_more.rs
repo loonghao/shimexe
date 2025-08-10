@@ -38,4 +38,3 @@ fn test_if_condition_in_template() {
     assert_eq!(rendered, "cond=true");
     std::env::remove_var("ENVX");
 }
-

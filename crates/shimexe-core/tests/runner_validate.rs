@@ -29,4 +29,3 @@ fn test_runner_validate_ok_and_cache() {
     runner.validate().unwrap(); // initial validation
     runner.validate().unwrap(); // cached path (should be quick and ok)
 }
-

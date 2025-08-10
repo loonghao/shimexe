@@ -1,7 +1,9 @@
 // 2025 tech: Rust stable. Focus on pure functions for reliable coverage gains.
 
+use shimexe_core::utils::{
+    expand_env_vars, get_builtin_env_vars, get_exe_extension, get_path_separator,
+};
 use std::env;
-use shimexe_core::utils::{expand_env_vars, get_builtin_env_vars, get_exe_extension, get_path_separator};
 
 #[test]
 fn test_expand_env_vars_variants() {
@@ -35,4 +37,3 @@ fn test_platform_helpers() {
     assert!(builtins.contains_key("EXE_EXT"));
     assert!(builtins.contains_key("PATH_SEP"));
 }
-

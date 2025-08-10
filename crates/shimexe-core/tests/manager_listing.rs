@@ -39,4 +39,3 @@ fn test_manager_list_and_get() {
     assert_eq!(got.name, "echoer");
     assert_eq!(got.is_valid, false); // shim exe not created in test
 }
-

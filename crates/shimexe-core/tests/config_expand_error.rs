@@ -26,4 +26,3 @@ fn test_expand_env_vars_error_unclosed_brace() {
     let msg = format!("{}", err);
     assert!(msg.contains("Unclosed ${") || msg.contains("EnvExpansion"));
 }
-
