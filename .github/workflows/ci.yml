@@ -162,7 +162,7 @@ jobs:
       - name: Setup Node.js (for release-please CLI)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install release-please CLI
         run: |
