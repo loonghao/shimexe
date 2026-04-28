@@ -61,7 +61,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "8.0"
 
 # HTTP client and async
-reqwest = { version = "0.12", features = [
+reqwest = { version = "0.13", features = [
     "json",
     "rustls-tls",
 ], default-features = false }
