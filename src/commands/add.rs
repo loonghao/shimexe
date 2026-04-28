@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use clap::Args;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, info};
 
 use crate::shim_manager::ShimManager;
@@ -45,14 +46,65 @@ pub struct AddCommand {
     pub add_system_path: bool,
 }
 
+#[async_trait]
+trait DownloadService {
+    async fn download_archive(
+        &self,
+        url: &str,
+        base_dir: &Path,
+        shim_name: &str,
+    ) -> Result<Vec<PathBuf>>;
+    async fn download_if_missing(&self, url: &str, download_path: &Path) -> Result<bool>;
+}
+
+struct CoreDownloadService;
+
+#[async_trait]
+impl DownloadService for CoreDownloadService {
+    async fn download_archive(
+        &self,
+        url: &str,
+        base_dir: &Path,
+        shim_name: &str,
+    ) -> Result<Vec<PathBuf>> {
+        let mut downloader = Downloader::new().await?;
+        let executables = downloader
+            .download_and_extract_archive(url, base_dir, shim_name)
+            .await
+            .with_context(|| format!("Failed to download and extract archive from {}", url))?;
+        Ok(executables)
+    }
+
+    async fn download_if_missing(&self, url: &str, download_path: &Path) -> Result<bool> {
+        let mut downloader = Downloader::new().await?;
+        let downloaded = downloader
+            .download_if_missing(url, download_path)
+            .await
+            .with_context(|| format!("Failed to download file from {}", url))?;
+        Ok(downloaded)
+    }
+}
+
 impl AddCommand {
     pub async fn execute(&self, global_shim_dir: Option<PathBuf>) -> Result<()> {
+        let download_service = CoreDownloadService;
+        self.execute_with_download_service(global_shim_dir, &download_service)
+            .await
+    }
+
+    async fn execute_with_download_service<D: DownloadService + Sync>(
+        &self,
+        global_shim_dir: Option<PathBuf>,
+        download_service: &D,
+    ) -> Result<()> {
         // Use command-specific shim_dir if provided, otherwise use global setting
         let shim_dir = self.shim_dir.clone().or(global_shim_dir);
         let manager = ShimManager::new(shim_dir.clone())?;
 
         // Determine the actual name and path
-        let (shim_name, actual_path) = self.resolve_name_and_path(&shim_dir).await?;
+        let (shim_name, actual_path) = self
+            .resolve_name_and_path(&shim_dir, download_service)
+            .await?;
 
         // Check if shim already exists
         if manager.shim_exists(&shim_name) && !self.force {
@@ -63,21 +115,17 @@ impl AddCommand {
         }
 
         // Parse environment variables
-        let mut env_vars = HashMap::new();
-        for env_var in &self.env {
-            if let Some((key, value)) = env_var.split_once('=') {
-                env_vars.insert(key.to_string(), value.to_string());
-            } else {
-                return Err(anyhow::anyhow!(
-                    "Invalid environment variable format: {}",
-                    env_var
-                ));
-            }
-        }
+        let env_vars = self.parse_env_vars()?;
 
         // Create configuration based on source type
         let config = self
-            .create_shim_config(&shim_name, &actual_path, env_vars, &shim_dir)
+            .create_shim_config(
+                &shim_name,
+                &actual_path,
+                env_vars,
+                &shim_dir,
+                download_service,
+            )
             .await?;
 
         // Validate configuration
@@ -102,39 +150,26 @@ impl AddCommand {
     }
 
     /// Resolve the shim name and actual path, handling HTTP URLs, archives, and name inference
-    async fn resolve_name_and_path(&self, shim_dir: &Option<PathBuf>) -> Result<(String, String)> {
+    async fn resolve_name_and_path<D: DownloadService + Sync>(
+        &self,
+        shim_dir: &Option<PathBuf>,
+        download_service: &D,
+    ) -> Result<(String, String)> {
         let is_url = Downloader::is_url(&self.path);
 
         if is_url {
             // Handle HTTP URL
-            let shim_name = if let Some(ref name) = self.name {
-                name.clone()
-            } else {
-                // Infer name from URL
-                Downloader::infer_app_name_from_url(&self.path).ok_or_else(|| {
-                    anyhow::anyhow!("Could not infer application name from URL: {}", self.path)
-                })?
-            };
+            let shim_name = self.infer_shim_name()?;
 
             // Determine base directory for downloads
-            let base_dir = if let Some(ref dir) = shim_dir {
-                dir.clone()
-            } else {
-                dirs::home_dir()
-                    .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
-                    .join(".shimexe")
-            };
+            let base_dir = Self::resolve_base_dir(shim_dir)?;
 
             // Check if this is an archive URL
             if shimexe_core::ArchiveExtractor::is_archive_url(&self.path) {
                 // Handle archive download and extraction
-                let mut downloader = Downloader::new().await?;
-                let executables = downloader
-                    .download_and_extract_archive(&self.path, &base_dir, &shim_name)
-                    .await
-                    .with_context(|| {
-                        format!("Failed to download and extract archive from {}", self.path)
-                    })?;
+                let executables = download_service
+                    .download_archive(&self.path, &base_dir, &shim_name)
+                    .await?;
 
                 if executables.is_empty() {
                     return Err(anyhow::anyhow!(
@@ -167,11 +202,9 @@ impl AddCommand {
                 let download_path =
                     Downloader::generate_download_path(&base_dir, &shim_name, &filename);
 
-                let mut downloader = Downloader::new().await?;
-                let downloaded = downloader
+                let downloaded = download_service
                     .download_if_missing(&self.path, &download_path)
-                    .await
-                    .with_context(|| format!("Failed to download file from {}", self.path))?;
+                    .await?;
 
                 if downloaded {
                     println!("Downloaded {} to {}", self.path, download_path.display());
@@ -184,18 +217,7 @@ impl AddCommand {
             }
         } else {
             // Handle local path
-            let shim_name = if let Some(ref name) = self.name {
-                name.clone()
-            } else {
-                // Infer name from local path
-                PathBuf::from(&self.path)
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.to_string())
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Could not infer application name from path: {}", self.path)
-                    })?
-            };
+            let shim_name = self.infer_shim_name()?;
 
             Ok((shim_name, self.path.clone()))
         }
@@ -208,27 +230,18 @@ impl AddCommand {
         actual_path: &str,
         env_vars: HashMap<String, String>,
         shim_dir: &Option<PathBuf>,
+        download_service: &(impl DownloadService + Sync),
     ) -> Result<ShimConfig> {
         let is_url = Downloader::is_url(&self.path);
         let is_archive_url = is_url && shimexe_core::ArchiveExtractor::is_archive_url(&self.path);
 
         let (source_type, download_url, extracted_executables) = if is_archive_url {
             // Handle archive
-            let base_dir = if let Some(ref dir) = shim_dir {
-                dir.clone()
-            } else {
-                dirs::home_dir()
-                    .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
-                    .join(".shimexe")
-            };
+            let base_dir = Self::resolve_base_dir(shim_dir)?;
 
-            let mut downloader = Downloader::new().await?;
-            let executables = downloader
-                .download_and_extract_archive(&self.path, &base_dir, shim_name)
-                .await
-                .with_context(|| {
-                    format!("Failed to download and extract archive from {}", self.path)
-                })?;
+            let executables = download_service
+                .download_archive(&self.path, &base_dir, shim_name)
+                .await?;
 
             let extracted_executables = executables
                 .into_iter()
@@ -290,5 +303,50 @@ impl AddCommand {
             },
             auto_update: None,
         })
+    }
+
+    fn parse_env_vars(&self) -> Result<HashMap<String, String>> {
+        let mut env_vars = HashMap::new();
+        for env_var in &self.env {
+            if let Some((key, value)) = env_var.split_once('=') {
+                env_vars.insert(key.to_string(), value.to_string());
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Invalid environment variable format: {}",
+                    env_var
+                ));
+            }
+        }
+        Ok(env_vars)
+    }
+
+    fn infer_shim_name(&self) -> Result<String> {
+        if let Some(ref name) = self.name {
+            return Ok(name.clone());
+        }
+
+        if Downloader::is_url(&self.path) {
+            Downloader::infer_app_name_from_url(&self.path).ok_or_else(|| {
+                anyhow::anyhow!("Could not infer application name from URL: {}", self.path)
+            })
+        } else {
+            PathBuf::from(&self.path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+                .ok_or_else(|| {
+                    anyhow::anyhow!("Could not infer application name from path: {}", self.path)
+                })
+        }
+    }
+
+    fn resolve_base_dir(shim_dir: &Option<PathBuf>) -> Result<PathBuf> {
+        if let Some(ref dir) = shim_dir {
+            Ok(dir.clone())
+        } else {
+            Ok(dirs::home_dir()
+                .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
+                .join(".shimexe"))
+        }
     }
 }

@@ -47,6 +47,20 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+  # Nix flake checks for reproducible builds and cacheability
+  nix:
+    name: Nix Flake Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Run Nix flake check
+        run: nix flake check --print-build-logs
+
   # Testing across platforms
   test:
     name: Test - ${{ matrix.os }}

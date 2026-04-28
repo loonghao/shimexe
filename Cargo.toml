@@ -81,6 +81,7 @@ dirs.workspace = true
 serde.workspace = true
 toml.workspace = true
 tokio.workspace = true
+async-trait.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
