@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.5.14](https://github.com/loonghao/shimexe/compare/v0.5.13...v0.5.14) (2026-04-28)
+
+
+### Bug Fixes
+
+* address Windows install breakage and split core responsibilities ([ba6fea9](https://github.com/loonghao/shimexe/commit/ba6fea949e6348028b3209fe3413e5cf2363ebb4))
+* unify workspace versioning and disable component-in-tag to reduce duplicate PRs ([46d1f90](https://github.com/loonghao/shimexe/commit/46d1f90f9fef2bc1f0fcdcdad5308da2ead79d5f))
+
+
+### Code Refactoring
+
+* split shim responsibilities and add nix build path ([1f6c1f3](https://github.com/loonghao/shimexe/commit/1f6c1f35e14c271a127fa9060e293fbf25b9058f))
+
 ## [0.5.13](https://github.com/loonghao/shimexe/compare/v0.5.12...v0.5.13) (2025-08-10)
 
 
