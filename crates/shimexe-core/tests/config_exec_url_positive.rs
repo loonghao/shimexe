@@ -1,5 +1,6 @@
 // URL source: get_executable_path positive when file exists under ~/.shimexe/<name>/bin/<filename>
 
+#[cfg(unix)]
 use shimexe_core::config::{ShimConfig, ShimCore, SourceType};
 
 #[cfg(unix)]

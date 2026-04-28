@@ -181,6 +181,18 @@ scoop install shimexe
 
 Download pre-built binaries from [**GitHub Releases**](https://github.com/loonghao/shimexe/releases) for your platform.
 
+### ❄️ **Nix (Reproducible + Cached Build)**
+
+```bash
+# Build
+nix build .#shimexe
+
+# Dev shell
+nix develop
+```
+
+See [`docs/NIX.md`](docs/NIX.md) for details.
+
 ---
 
 ## ⚙️ **PATH Configuration**

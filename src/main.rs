@@ -6,6 +6,7 @@ use std::env;
 use std::path::PathBuf;
 
 mod commands;
+mod path_manager;
 mod shim_manager;
 
 use commands::*;
@@ -63,8 +64,8 @@ async fn main() -> Result<()> {
         .and_then(|s| s.to_str())
         .unwrap_or("shimexe");
 
-    // If the executable name is not "shimexe", we're likely running as a shim
-    if exe_name != "shimexe" {
+    // Only treat clearly non-shimexe names as shim invocations.
+    if !is_main_cli_binary_name(exe_name) {
         // Initialize minimal logging for shim mode (only errors by default)
         tracing_subscriber::fmt()
             .with_env_filter("shimexe=error")
@@ -113,6 +114,11 @@ async fn main() -> Result<()> {
             Ok(())
         }
     }
+}
+
+fn is_main_cli_binary_name(exe_name: &str) -> bool {
+    let normalized = exe_name.to_ascii_lowercase();
+    normalized == "shimexe" || normalized.starts_with("shimexe-")
 }
 
 /// Run the executable as a shim
@@ -220,5 +226,27 @@ fn print_system_info() {
         let shimexe_dir = home_dir.join(".shimexe");
         println!("  Shimexe Directory: {}", shimexe_dir.display());
         println!("  Directory Exists: {}", shimexe_dir.exists());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_main_cli_binary_name;
+
+    #[test]
+    fn detects_main_cli_names() {
+        assert!(is_main_cli_binary_name("shimexe"));
+        assert!(is_main_cli_binary_name("SHIMEXE"));
+        assert!(is_main_cli_binary_name("shimexe-x86_64-pc-windows-msvc"));
+        assert!(is_main_cli_binary_name(
+            "shimexe-v0.5.12-x86_64-pc-windows-msvc"
+        ));
+    }
+
+    #[test]
+    fn detects_shim_names() {
+        assert!(!is_main_cli_binary_name("uv"));
+        assert!(!is_main_cli_binary_name("python"));
+        assert!(!is_main_cli_binary_name("notepad"));
     }
 }

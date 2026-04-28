@@ -41,21 +41,46 @@ function Write-Success {
 
 # Detect platform and map to release naming convention
 function Get-Platform {
-    $arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else { "i686" }
+    $rawArch = if ($env:PROCESSOR_ARCHITEW6432) {
+        $env:PROCESSOR_ARCHITEW6432
+    } else {
+        $env:PROCESSOR_ARCHITECTURE
+    }
+
+    $arch = switch -Regex ($rawArch.ToLowerInvariant()) {
+        "arm64|aarch64" { "aarch64" }
+        "amd64|x86_64" { "x86_64" }
+        "x86|i386|i686" { "i686" }
+        default { "x86_64" }
+    }
+
     return "$arch-pc-windows-msvc"
 }
 
-# Map platform to release file naming convention
-function Get-ReleaseFileName {
-    param([string]$Platform)
+# Return archive naming candidates for different release eras
+function Get-ReleaseFileCandidates {
+    param(
+        [string]$Platform,
+        [string]$Version
+    )
 
-    # Map from Rust target triple to release file naming
-    switch ($Platform) {
-        "x86_64-pc-windows-msvc" { return "shimexe-Windows-msvc-x86_64.zip" }
-        "i686-pc-windows-msvc" { return "shimexe-Windows-msvc-i686.zip" }
-        "aarch64-pc-windows-msvc" { return "shimexe-Windows-msvc-arm64.zip" }
-        default { return "shimexe-$Platform.zip" }
+    $legacyArchive = switch ($Platform) {
+        "x86_64-pc-windows-msvc" { "shimexe-Windows-msvc-x86_64.zip" }
+        "i686-pc-windows-msvc" { "shimexe-Windows-msvc-i686.zip" }
+        "aarch64-pc-windows-msvc" { "shimexe-Windows-msvc-arm64.zip" }
+        default { $null }
     }
+
+    $candidates = @(
+        "shimexe-$Platform.zip",
+        "shimexe-$Version-$Platform.zip"
+    )
+
+    if ($legacyArchive) {
+        $candidates += $legacyArchive
+    }
+
+    return $candidates
 }
 
 # Get latest shimexe version from GitHub API with retry and fallback
@@ -157,20 +182,38 @@ function Install-Shimexe {
     
     Write-Info "Installing shimexe v$Version for $platform..."
 
-    # Construct download URL using correct release file naming
-    $archiveName = Get-ReleaseFileName -Platform $platform
-    $downloadUrl = "$BaseUrl/download/v$Version/$archiveName"
-    
     # Create temporary directory
     $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
     
     try {
-        # Download
-        Write-Info "Downloading from $downloadUrl..."
-        $archivePath = Join-Path $tempDir $archiveName
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath -UseBasicParsing
+        # Download - try multiple archive naming conventions for compatibility
+        $archiveCandidates = Get-ReleaseFileCandidates -Platform $platform -Version $Version
+        $archivePath = $null
+        $downloadUrl = $null
+
+        foreach ($archiveName in $archiveCandidates) {
+            $candidateUrl = "$BaseUrl/download/v$Version/$archiveName"
+            $candidatePath = Join-Path $tempDir $archiveName
+
+            try {
+                Write-Info "Trying download from $candidateUrl..."
+                Invoke-WebRequest -Uri $candidateUrl -OutFile $candidatePath -UseBasicParsing
+                $archivePath = $candidatePath
+                $downloadUrl = $candidateUrl
+                break
+            }
+            catch {
+                Write-Warn "Archive not found with name '$archiveName', trying next candidate..."
+            }
+        }
+
+        if (-not $archivePath) {
+            Write-Error "Failed to locate a compatible release archive for platform '$platform'. Tried: $($archiveCandidates -join ', ')"
+            exit 1
+        }
         
         # Extract
+        Write-Info "Downloaded from $downloadUrl"
         Write-Info "Extracting to $InstallDir..."
         if (-not (Test-Path $InstallDir)) {
             New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
