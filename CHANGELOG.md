@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.5.15](https://github.com/loonghao/shimexe/compare/v0.5.14...v0.5.15) (2026-04-29)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate turbo-cdn to 0.8.0 ([4c02b98](https://github.com/loonghao/shimexe/commit/4c02b988d48644b3bf8758414dd87260d48305eb))
+* sync workspace.package.version to 0.5.14 ([03d2cd8](https://github.com/loonghao/shimexe/commit/03d2cd82efcb9b4293f2a55c75f58ee8fd4e0ff4))
+
 ## [0.5.14](https://github.com/loonghao/shimexe/compare/v0.5.13...v0.5.14) (2026-04-28)
 
 
