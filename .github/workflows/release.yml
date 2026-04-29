@@ -48,7 +48,7 @@ jobs:
               }
             }
       - name: Run release-please
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
