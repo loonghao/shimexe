@@ -35,7 +35,7 @@ impl VxShimIntegration {
         })?;
 
         println!(
-            "✅ Installed {} v{} -> {}",
+            "[OK] Installed {} v{} -> {}",
             name,
             version,
             shim_path.display()
@@ -56,7 +56,7 @@ impl VxShimIntegration {
             .build()?;
 
         self.manager.update_shim(name, config)?;
-        println!("🔄 Switched {} to version {}", name, version);
+        println!("Switched {} to version {}", name, version);
         Ok(())
     }
 
@@ -69,10 +69,10 @@ impl VxShimIntegration {
             return Ok(());
         }
 
-        println!("📦 Installed tools:");
+        println!("Installed tools:");
         for shim in shims {
             let version = shim.version.as_deref().unwrap_or("unknown");
-            let status = if shim.is_valid { "✅" } else { "❌" };
+            let status = if shim.is_valid { "[OK]" } else { "[INVALID]" };
             println!("  {} {} v{}", status, shim.name, version);
         }
 
@@ -82,7 +82,7 @@ impl VxShimIntegration {
     /// Remove a tool
     pub fn remove_tool(&self, name: &str) -> Result<()> {
         self.manager.remove_shim(name)?;
-        println!("🗑️  Removed {}", name);
+        println!("Removed {}", name);
         Ok(())
     }
 
@@ -137,7 +137,7 @@ fn main() -> Result<()> {
 
     // Check tool status
     if vx.is_tool_valid("python")? {
-        println!("✅ Python is ready to use");
+        println!("Python is ready to use");
     }
 
     // Get detailed tool info

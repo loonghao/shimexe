@@ -2,7 +2,7 @@
 
 This document explains how to set up and maintain shimexe across different package managers.
 
-## 🍺 Homebrew Setup
+## Homebrew Setup
 
 ### Prerequisites
 1. Create a Homebrew tap repository: `https://github.com/loonghao/homebrew-tap`
@@ -24,7 +24,7 @@ homebrew-tap/
 2. Copy to the tap repository: `cp homebrew/shimexe.rb ../homebrew-tap/Formula/`
 3. Commit and push to the tap repository
 
-## 🍫 Chocolatey Setup
+## Chocolatey Setup
 
 ### Prerequisites
 1. Create a Chocolatey account at https://chocolatey.org/
@@ -49,7 +49,7 @@ chocolatey/
 1. Update version in the workflow or use the update script
 2. The workflow will automatically create and push the package
 
-## 🥄 Scoop Setup
+## Scoop Setup
 
 ### Prerequisites
 1. Create a Scoop bucket repository: `https://github.com/loonghao/scoop-bucket`
@@ -71,7 +71,7 @@ scoop-bucket/
 2. Copy to the bucket repository: `cp scoop/shimexe.json ../scoop-bucket/bucket/`
 3. Commit and push to the bucket repository
 
-## 🔄 Automated Release Process
+## Automated Release Process
 
 When you push a tag (e.g., `v0.3.6`), the GitHub Actions workflow will:
 
@@ -81,7 +81,7 @@ When you push a tag (e.g., `v0.3.6`), the GitHub Actions workflow will:
 4. **Create and publish Chocolatey package**
 5. **Update Scoop manifest** in the bucket repository
 
-## 🛠️ Manual Version Updates
+## Manual Version Updates
 
 Use the provided scripts to update all package managers at once:
 
@@ -96,7 +96,7 @@ chmod +x pkg/scripts/update-package-managers.sh
 .\pkg\scripts\update-package-managers.ps1 0.3.6
 ```
 
-## 📊 Download Statistics
+## Download Statistics
 
 Track downloads across platforms:
 
@@ -105,7 +105,7 @@ Track downloads across platforms:
 - **Homebrew**: https://formulae.brew.sh/formula/shimexe
 - **Chocolatey**: https://chocolatey.org/packages/shimexe
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Homebrew Issues
 - Ensure the tap repository exists and is public
@@ -122,7 +122,7 @@ Track downloads across platforms:
 - Check that `SCOOP_BUCKET_TOKEN` has correct permissions
 - Verify manifest syntax with `scoop checkver shimexe`
 
-## 📝 Adding New Package Managers
+## Adding New Package Managers
 
 To add support for additional package managers:
 
@@ -132,7 +132,7 @@ To add support for additional package managers:
 4. Update this documentation
 5. Add badges to README.md
 
-## 🔗 Useful Links
+## Useful Links
 
 - [Homebrew Formula Cookbook](https://docs.brew.sh/Formula-Cookbook)
 - [Chocolatey Package Creation](https://docs.chocolatey.org/en-us/create/create-packages)

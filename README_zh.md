@@ -4,7 +4,7 @@
 
 # shimexe
 
-**🚀 现代化可执行文件 Shim 管理器**
+**现代化可执行文件 Shim 管理器**
 
 *将任何可执行文件转换为智能、便携的 shim，支持 HTTP 下载*
 
@@ -21,10 +21,10 @@
 [![Scoop](https://img.shields.io/scoop/v/shimexe?logo=windows&logoColor=white)](https://scoop.sh/#/apps?q=shimexe)
 
 <!-- 下载量与使用情况 -->
-[![Crates.io Downloads](https://img.shields.io/crates/d/shimexe.svg?logo=rust&logoColor=white&label=cargo%20安装量)](https://crates.io/crates/shimexe)
-[![GitHub Downloads](https://img.shields.io/github/downloads/loonghao/shimexe/total?logo=github&logoColor=white&label=github%20下载量)](https://github.com/loonghao/shimexe/releases)
-[![Homebrew Downloads](https://img.shields.io/homebrew/installs/dm/shimexe?logo=homebrew&logoColor=white&label=brew%20安装量)](https://formulae.brew.sh/formula/shimexe)
-[![Chocolatey Downloads](https://img.shields.io/chocolatey/dt/shimexe?logo=chocolatey&logoColor=white&label=choco%20安装量)](https://chocolatey.org/packages/shimexe)
+[![Crates.io Downloads](https://img.shields.io/crates/d/shimexe.svg?logo=rust&logoColor=white&label=cargo%20installs)](https://crates.io/crates/shimexe)
+[![GitHub Downloads](https://img.shields.io/github/downloads/loonghao/shimexe/total?logo=github&logoColor=white&label=github%20downloads)](https://github.com/loonghao/shimexe/releases)
+[![Homebrew Downloads](https://img.shields.io/homebrew/installs/dm/shimexe?logo=homebrew&logoColor=white&label=brew%20installs)](https://formulae.brew.sh/formula/shimexe)
+[![Chocolatey Downloads](https://img.shields.io/chocolatey/dt/shimexe?logo=chocolatey&logoColor=white&label=choco%20installs)](https://chocolatey.org/packages/shimexe)
 
 <!-- 文档与社区 -->
 [![Documentation](https://docs.rs/shimexe/badge.svg)](https://docs.rs/shimexe)
@@ -36,38 +36,38 @@
 [![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?logo=rust&logoColor=white)](https://github.com/loonghao/shimexe/releases)
 [![Rust Version](https://img.shields.io/badge/rust-1.70%2B-orange?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
-[📖 English Documentation](README.md) • [🚀 快速开始](#快速开始) • [📦 安装](#安装) • [🔧 示例](#示例)
+[English Documentation](README.md) · [快速开始](#快速开始) · [安装](#安装) · [示例](#示例)
 
 </div>
 
 ---
 
-## 🌟 什么是 shimexe？
+## 什么是 shimexe？
 
-**shimexe** 是一个革命性的可执行文件 shim 管理器，它连接了本地工具和云分发应用程序之间的桥梁。创建轻量级、便携的 shim，可以自动从 HTTP URL 下载、提取和执行工具 - 同时保持本地可执行文件的简单性。
+**shimexe** 是一个跨平台的可执行文件 shim 管理器，连接本地工具与云分发应用程序。创建轻量级、便携的 shim，可以自动从 HTTP URL 下载、提取和执行工具，同时保持本地可执行文件的简单性。
 
-### 💡 为什么选择 shimexe？
+### 为什么选择 shimexe？
 
-- **🌐 云原生**: 直接从 GitHub releases、CDN 或任何 HTTP URL 下载工具
-- **📦 智能归档**: 自动提取 zip 文件并发现可执行文件
-- **🔧 零配置**: 智能默认设置，强大的自定义选项
-- **🚀 便携**: Shim 可独立工作，无需安装 shimexe
-- **⚡ 快速**: 高效缓存和智能重新下载逻辑
-- **🔒 安全**: 使用 Rust 和 rustls-tls 构建，确保安全的 HTTPS 连接
+- **云原生**: 直接从 GitHub releases、CDN 或任何 HTTP URL 下载工具
+- **智能归档**: 自动提取 zip 文件并发现可执行文件
+- **零配置**: 智能默认设置，强大的自定义选项
+- **便携**: Shim 可独立工作，无需安装 shimexe
+- **快速**: 高效缓存和智能重新下载逻辑
+- **安全**: 使用 Rust 和 rustls-tls 构建，确保安全的 HTTPS 连接
 
-## ✨ 核心特性
+## 核心特性
 
 <table>
 <tr>
 <td width="50%">
 
-### 🌐 **云优先设计**
+### 云优先设计
 - **HTTP URL 支持**: 从 GitHub、CDN、任何 URL 下载
 - **归档提取**: 自动提取 zip 文件并查找可执行文件
 - **智能缓存**: 高效的下载和存储管理
 - **自动恢复**: 自动重新下载缺失的文件
 
-### 🔧 **开发者体验**
+### 开发者体验
 - **零配置**: 开箱即用的智能默认设置
 - **TOML 配置**: 人类可读、版本可控的配置
 - **环境变量**: 强大的 `${VAR:default}` 扩展
@@ -76,13 +76,13 @@
 </td>
 <td width="50%">
 
-### 🚀 **生产就绪**
+### 生产就绪
 - **跨平台**: Windows、macOS、Linux 支持
 - **静态链接**: 无需运行时依赖
 - **便携 Shim**: 分发时可独立工作
 - **安全**: 使用 Rust 和 rustls-tls 构建
 
-### 📦 **集成友好**
+### 集成友好
 - **包管理器**: 可通过 Crates.io、Chocolatey、Scoop 安装
 - **API 库**: 在您的项目中使用 `shimexe-core`
 - **工具管理器**: 完美适配 vx、rye 等类似工具
@@ -92,11 +92,11 @@
 </tr>
 </table>
 
-## 📦 安装
+## 安装
 
 <div align="center">
 
-### 🚀 **一键安装** (推荐)
+### 一键安装 (推荐)
 
 </div>
 
@@ -104,12 +104,12 @@
 <tr>
 <td width="50%">
 
-**🐧 Unix/Linux/macOS**
+**Unix/Linux/macOS**
 ```bash
 curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
 ```
 
-**🪟 Windows (PowerShell)**
+**Windows (PowerShell)**
 ```powershell
 irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 | iex
 ```
@@ -117,7 +117,7 @@ irm https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.ps1 
 </td>
 <td width="50%">
 
-**📌 指定版本**
+**指定版本**
 ```bash
 # Unix/Linux/macOS
 SHIMEXE_VERSION="0.3.1" curl -LsSf https://raw.githubusercontent.com/loonghao/shimexe/main/scripts/install.sh | sh
@@ -130,13 +130,13 @@ $env:SHIMEXE_VERSION="0.3.1"; irm https://raw.githubusercontent.com/loonghao/shi
 </tr>
 </table>
 
-### 📦 **包管理器**
+### 包管理器
 
 <table>
 <tr>
 <td width="25%">
 
-**🦀 Cargo**
+**Cargo**
 ```bash
 cargo install shimexe
 ```
@@ -144,7 +144,7 @@ cargo install shimexe
 </td>
 <td width="25%">
 
-**🍺 Homebrew**
+**Homebrew**
 ```bash
 # 首先添加 tap
 brew tap loonghao/tap
@@ -156,7 +156,7 @@ brew install shimexe
 </td>
 <td width="25%">
 
-**🍫 Chocolatey**
+**Chocolatey**
 ```powershell
 choco install shimexe
 ```
@@ -164,7 +164,7 @@ choco install shimexe
 </td>
 <td width="25%">
 
-**🥄 Scoop**
+**Scoop**
 ```powershell
 # 首先添加 bucket
 scoop bucket add loonghao https://github.com/loonghao/scoop-bucket
@@ -177,17 +177,29 @@ scoop install shimexe
 </tr>
 </table>
 
-### 📥 **手动下载**
+### 手动下载
 
-从 [**GitHub Releases**](https://github.com/loonghao/shimexe/releases) 下载适合您平台的预构建二进制文件。
+从 [GitHub Releases](https://github.com/loonghao/shimexe/releases) 下载适合您平台的预构建二进制文件。
+
+### Nix (可复现 + 缓存构建)
+
+```bash
+# 构建
+nix build .#shimexe
+
+# 开发环境
+nix develop
+```
+
+详见 [`docs/NIX.md`](docs/NIX.md)。
 
 ---
 
-## ⚙️ **PATH 配置**
+## PATH 配置
 
 <div align="center">
 
-### **选择您的方式**
+### 选择您的方式
 
 </div>
 
@@ -195,7 +207,7 @@ scoop install shimexe
 <tr>
 <td width="50%">
 
-### 🔧 **方式一：自动配置 PATH** (推荐)
+### 方式一：自动配置 PATH (推荐)
 
 创建 shim 时添加 `--add-system-path`：
 
@@ -207,14 +219,14 @@ uv --version
 ```
 
 **优点：**
-- ✅ 直接通过名称使用工具
-- ✅ 像系统安装的工具一样工作
-- ✅ 自动 PATH 管理
+- 直接通过名称使用工具
+- 像系统安装的工具一样工作
+- 自动 PATH 管理
 
 </td>
 <td width="50%">
 
-### 🏃 **方式二：使用 `shimexe run`** (无需设置)
+### 方式二：使用 `shimexe run` (无需设置)
 
 通过 shimexe 命令运行工具：
 
@@ -226,15 +238,15 @@ shimexe run uv --version
 ```
 
 **优点：**
-- ✅ 无需修改 PATH
-- ✅ 明确的工具执行
-- ✅ 立即可用
+- 无需修改 PATH
+- 明确的工具执行
+- 立即可用
 
 </td>
 </tr>
 </table>
 
-### 📍 **手动 PATH 设置**
+### 手动 PATH 设置
 
 如果您喜欢手动配置，将 `~/.shimexe` 添加到您的 PATH：
 
@@ -250,11 +262,13 @@ $env:PATH = "$env:USERPROFILE\.shimexe;$env:PATH"
 # 或通过系统属性 > 环境变量永久添加
 ```
 
-## 🚀 快速开始
+## 快速开始
 
 <div align="center">
 
-### **30 秒上手！**
+### 30 秒上手
+
+*现已支持所有主流包管理器*
 
 </div>
 
@@ -262,14 +276,14 @@ $env:PATH = "$env:USERPROFILE\.shimexe;$env:PATH"
 <tr>
 <td width="50%">
 
-### 🌐 **云工具** (神奇功能!)
+### 云工具
 
 **1. 从 GitHub Releases 下载**
 ```bash
 # 自动下载并创建 shim，配置 PATH
 shimexe add uv --path https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-pc-windows-msvc.zip --add-system-path
 
-# 现在可以直接使用！
+# 现在可以直接使用
 uv --version
 
 # 或者不配置 PATH，使用 shimexe run：
@@ -289,15 +303,16 @@ shimexe run installer-analyzer --help
 **3. 归档提取**
 ```bash
 # 提取 zip 并查找所有可执行文件
-shimexe add devtools --path https://example.com/tools.zip
+shimexe add devtools --path https://example.com/tools.zip --add-system-path
 
-# 自动创建多个 shim！
+# 自动创建多个 shim
+# 直接使用或通过 shimexe run
 ```
 
 </td>
 <td width="50%">
 
-### 🔧 **本地工具** (传统方式)
+### 本地工具
 
 **1. 使用示例初始化**
 ```bash
@@ -329,7 +344,7 @@ shimexe remove old-tool
 </tr>
 </table>
 
-### 🎯 **真实世界示例**
+### 真实世界示例
 
 ```bash
 # 您可以立即安装的热门工具（配置 PATH）：
@@ -337,7 +352,7 @@ shimexe add rg --path https://github.com/BurntSushi/ripgrep/releases/download/14
 shimexe add fd --path https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-pc-windows-msvc.zip --add-system-path
 shimexe add bat --path https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-pc-windows-msvc.zip --add-system-path
 
-# 现在可以在任何地方使用它们！
+# 现在可以在任何地方使用它们
 rg "TODO" --type rust
 fd "*.rs" src/
 bat README.md
@@ -350,7 +365,7 @@ shimexe run bat README.md
 
 ## 配置格式
 
-Shim 使用 TOML 文件配置，文件扩展名为 `.shim.toml`:
+Shim 使用 TOML 文件配置，文件扩展名为 `.shim.toml`。
 
 ### 本地可执行文件配置
 
@@ -359,16 +374,16 @@ Shim 使用 TOML 文件配置，文件扩展名为 `.shim.toml`:
 name = "rust"
 path = "${RUST_HOME:~/.cargo/bin}/rustc${EXE_EXT:.exe}"
 args = ["--version"]
-cwd = "/可选的工作目录"
+cwd = "/optional/working/directory"
 
 [env]
 RUST_LOG = "info"
 CARGO_HOME = "${CARGO_HOME:~/.cargo}"
 
 [metadata]
-description = "Rust 编译器 shim"
+description = "Rust compiler shim"
 version = "1.0.0"
-author = "您的名字"
+author = "Your Name"
 tags = ["rust", "compiler"]
 ```
 
@@ -384,16 +399,16 @@ args = []
 cwd = ""
 
 [env]
-# 可选的环境变量
+# Optional environment variables
 
 [metadata]
-description = "来自 GitHub 的安装程序分析工具"
+description = "Installer analyzer tool from GitHub"
 version = "0.7.0"
 author = "loonghao"
 tags = ["installer", "analyzer", "tool"]
 ```
 
-### 压缩包配置（新功能！）
+### 压缩包配置
 
 ```toml
 [shim]
@@ -403,7 +418,7 @@ download_url = "https://github.com/release-plz/release-plz/releases/download/rel
 source_type = "archive"
 args = []
 
-# 从压缩包中提取的可执行文件列表
+# List of extracted executables from the archive
 [[shim.extracted_executables]]
 name = "release-plz"
 path = "release-plz.exe"
@@ -411,10 +426,10 @@ full_path = "/home/user/.shimexe/release-plz/bin/release-plz.exe"
 is_primary = true
 
 [env]
-# 可选的环境变量
+# Optional environment variables
 
 [metadata]
-description = "来自压缩包的 Release Please 工具"
+description = "Release Please tool from archive"
 version = "0.3.135"
 author = "release-plz team"
 tags = ["release", "automation", "tool"]
@@ -424,7 +439,7 @@ tags = ["release", "automation", "tool"]
 
 ## 环境变量扩展
 
-shimexe 支持强大的环境变量扩展功能:
+shimexe 支持环境变量扩展：
 
 - `${VAR}` - 扩展 VAR，如果不存在则报错
 - `${VAR:default}` - 扩展 VAR，如果不存在则使用默认值
@@ -436,7 +451,7 @@ shimexe 支持强大的环境变量扩展功能:
 
 ## Shim 工作原理
 
-shimexe 创建的独立可执行 shim 可以在分发时独立工作：
+shimexe 创建的独立可执行 shim 可以在分发时独立工作。
 
 ### Shim 架构
 
@@ -524,49 +539,30 @@ shimexe add devtools --path https://example.com/development-tools.zip
 
 ```toml
 [dependencies]
-shimexe-core = "0.1"
+shimexe-core = "0.5"
 ```
 
-### 🎯 **高级 API - ShimManager** (推荐)
-
-```rust
-use shimexe_core::prelude::*;
-
-// 创建 shim 管理器
-let manager = ShimManager::new(PathBuf::from("~/.my-tool/shims"))?;
-
-// 使用构建器模式创建 shim
-let shim_path = manager.create_shim_with_builder("my-tool", |builder| {
-    builder
-        .path("/usr/bin/my-tool")
-        .args(vec!["--default".to_string()])
-        .env("DEBUG", "1")
-        .description("我的工具")
-        .version("1.0.0")
-        .tag("utility")
-})?;
-
-// 列出所有 shim
-let shims = manager.list_shims()?;
-for shim in shims {
-    println!("{}: {} ({})", shim.name, shim.path, shim.version.unwrap_or_default());
-}
-
-// 执行 shim
-let exit_code = manager.execute_shim("my-tool", &["--help".to_string()])?;
-```
-
-### 🔧 **基础 API**
+示例用法：
 
 ```rust
 use shimexe_core::prelude::*;
 
 // 加载并运行 shim
 let runner = ShimRunner::from_file("my-app.shim.toml")?;
-let exit_code = runner.execute(&["--help"])?;
+let exit_code = runner.execute(&["--help".to_string()])?;
 
 // 程序化创建 shim
-let config = ShimConfig::new("my-tool", "/usr/bin/my-tool");
+let config = ShimConfig {
+    shim: ShimCore {
+        name: "my-tool".to_string(),
+        path: "/usr/bin/my-tool".to_string(),
+        args: vec!["--default-arg".to_string()],
+        cwd: None,
+    },
+    env: HashMap::new(),
+    metadata: Default::default(),
+};
+
 config.to_file("my-tool.shim.toml")?;
 ```
 
@@ -585,7 +581,7 @@ let filename = Downloader::extract_filename_from_url(url).unwrap();
 
 // 生成下载路径
 let download_path = Downloader::generate_download_path(
-    &std::path::Path::new("~/.shimexe"),
+    std::path::Path::new("~/.shimexe"),
     &app_name,
     &filename
 );
@@ -608,58 +604,38 @@ let config = ShimConfig {
 
 ## 集成示例
 
-### 🔧 **与 vx 集成** (改进版)
+### 与 vx 集成
 
 ```rust
-use shimexe_core::prelude::*;
+use shimexe_core::ShimRunner;
 
-// 创建 VX 专用的 shim 管理器
-let manager = ShimManager::with_metadata_dir(
-    PathBuf::from("~/.vx/shims"),
-    PathBuf::from("~/.vx/metadata")
-)?;
-
-// 创建工具版本 shim
-let shim_path = manager.create_shim_with_builder("node", |builder| {
-    builder
-        .path("/home/user/.vx/versions/node/18.17.0/bin/node")
-        .version("18.17.0")
-        .description("Node.js managed by vx")
-        .tag("vx-managed")
-        .tag("javascript")
-})?;
-
-// 切换版本
-manager.update_shim("node",
-    manager.builder("node")
-        .path("/home/user/.vx/versions/node/20.5.0/bin/node")
-        .version("20.5.0")
-        .build()?
-)?;
+// 在您的 vx 集成中
+let shim_path = format!("{}.shim.toml", tool_name);
+let runner = ShimRunner::from_file(&shim_path)?;
+runner.execute(&args)?;
 ```
 
-### 🐍 **与 rye 集成**
+### 与 rye 集成
 
 ```rust
-use shimexe_core::prelude::*;
+use shimexe_core::{ShimConfig, ShimCore};
 
-// 创建 Python 工具 shim 管理器
-let manager = ShimManager::new(PathBuf::from("~/.rye/shims"))?;
-
-// 创建 Python shim
-let python_shim = manager.create_shim_with_builder("python", |builder| {
-    builder
-        .path("${RYE_HOME}/py/cpython@3.11.4/install/bin/python")
-        .description("Python managed by rye")
-        .version("3.11.4")
-        .tag("rye-managed")
-        .tag("python")
-})?;
+// 创建 Python 工具 shim
+let config = ShimConfig {
+    shim: ShimCore {
+        name: "python".to_string(),
+        path: "${RYE_HOME}/shims/python${EXE_EXT}".to_string(),
+        args: vec![],
+        cwd: None,
+    },
+    env: rye_env_vars(),
+    metadata: Default::default(),
+};
 ```
 
 ## 构建图标
 
-shimexe 包含一个美观的自定义图标，会嵌入到 Windows 可执行文件中。构建过程自动处理图标生成：
+shimexe 包含一个自定义图标，会嵌入到 Windows 可执行文件中。构建过程自动处理图标生成：
 
 1. **自动生成**：如果您安装了 ImageMagick，构建脚本会自动将 `assets/icon.svg` 转换为 `assets/icon.ico`
 2. **手动生成**：您也可以手动生成图标：
@@ -676,11 +652,11 @@ shimexe 包含一个美观的自定义图标，会嵌入到 Windows 可执行文
 
 ## 贡献
 
-欢迎贡献！请随时提交 Pull Request。
+欢迎贡献。请随时提交 Pull Request。
 
 ## 许可证
 
-本项目采用 MIT 许可证 - 详情请参阅 [LICENSE-MIT](LICENSE-MIT) 文件。
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ## 致谢
 

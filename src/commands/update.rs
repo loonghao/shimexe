@@ -80,7 +80,7 @@ impl UpdateCommand {
         manager.update_shim(&self.name, &config)?;
 
         info!("Successfully updated shim '{}'", self.name);
-        println!("✓ Updated shim '{}'", self.name);
+        println!("[OK] Updated shim '{}'", self.name);
 
         Ok(())
     }

@@ -150,7 +150,7 @@ impl EnableAutoUpdateCommand {
         manager.update_shim(&self.name, &config)?;
 
         info!("Enabled auto-update for shim '{}'", self.name);
-        println!("✅ Auto-update enabled for '{}'", self.name);
+        println!("[OK] Auto-update enabled for '{}'", self.name);
         println!("   Provider: {}", self.provider);
         println!("   Check interval: {} hours", self.interval);
 
@@ -177,7 +177,7 @@ impl DisableAutoUpdateCommand {
         manager.update_shim(&self.name, &config)?;
 
         info!("Disabled auto-update for shim '{}'", self.name);
-        println!("✅ Auto-update disabled for '{}'", self.name);
+        println!("[OK] Auto-update disabled for '{}'", self.name);
 
         Ok(())
     }
@@ -240,7 +240,7 @@ impl ConfigureAutoUpdateCommand {
         manager.update_shim(&self.name, &config)?;
 
         info!("Updated auto-update configuration for shim '{}'", self.name);
-        println!("✅ Auto-update configuration updated for '{}'", self.name);
+        println!("[OK] Auto-update configuration updated for '{}'", self.name);
 
         Ok(())
     }
@@ -266,10 +266,10 @@ impl StatusAutoUpdateCommand {
 
         let config = manager.get_shim_config(name)?;
 
-        println!("📦 {}", name);
+        println!("- {}", name);
 
         if let Some(ref auto_update) = config.auto_update {
-            println!("   Status: ✅ Enabled");
+            println!("   Status: [OK] Enabled");
             println!(
                 "   Provider: {}",
                 self.format_provider(&auto_update.provider)
@@ -287,7 +287,7 @@ impl StatusAutoUpdateCommand {
                 println!("   Post-update command: {}", cmd);
             }
         } else {
-            println!("   Status: ❌ Disabled");
+            println!("   Status: [OFF] Disabled");
         }
 
         Ok(())
@@ -304,17 +304,17 @@ impl StatusAutoUpdateCommand {
         println!("Auto-update status for all shims:\n");
 
         for (name, config) in shims {
-            println!("📦 {}", name);
+            println!("- {}", name);
 
             if let Some(ref auto_update) = config.auto_update {
-                println!("   Status: ✅ Enabled");
+                println!("   Status: [OK] Enabled");
                 println!(
                     "   Provider: {}",
                     self.format_provider(&auto_update.provider)
                 );
                 println!("   Interval: {} hours", auto_update.check_interval_hours);
             } else {
-                println!("   Status: ❌ Disabled");
+                println!("   Status: [OFF] Disabled");
             }
 
             println!();

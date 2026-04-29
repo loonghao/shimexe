@@ -23,7 +23,7 @@ name = "shimexe"
 path = "src/main.rs"
 
 [workspace.package]
-version = "0.5.14"
+version = "0.5.15"
 edition = "2021"
 authors = ["Hal <hal.long@outlook.com>"]
 license = "MIT"

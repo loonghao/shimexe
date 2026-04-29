@@ -16,14 +16,14 @@ impl ValidateCommand {
 
         // Load and validate configuration
         let config = ShimConfig::from_file(&self.shim_file)?;
-        println!("✓ Configuration syntax is valid");
+        println!("[OK] Configuration syntax is valid");
 
         // Create runner and validate executable
         let runner = ShimRunner::from_config(config)?;
         runner.validate()?;
-        println!("✓ Target executable is valid and accessible");
+        println!("[OK] Target executable is valid and accessible");
 
-        println!("✓ Shim configuration is valid");
+        println!("[OK] Shim configuration is valid");
         Ok(())
     }
 }
