@@ -35,10 +35,10 @@ fn add_to_windows_path(dir: &str) -> Result<()> {
 
     let script = format!(
         r#"
-        $currentPath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
-        $newPath = $currentPath + ';{}'
-        [Environment]::SetEnvironmentVariable('PATH', $newPath, 'Machine')
-        "#,
+            $currentPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+            $newPath = $currentPath + ';{}'
+            [Environment]::SetEnvironmentVariable('PATH', $newPath, 'User')
+            "#,
         dir
     );
 
@@ -52,7 +52,7 @@ fn add_to_windows_path(dir: &str) -> Result<()> {
     }
 
     info!("Added directory to system PATH: {}", dir);
-    println!("✓ Added {} to system PATH", dir);
+    println!("Added {} to user PATH", dir);
     println!("  Note: You may need to restart your terminal for changes to take effect");
 
     Ok(())
@@ -94,13 +94,43 @@ fn add_to_unix_path(dir: &str) -> Result<()> {
     }
 
     info!("Added directory to shell profiles: {}", dir);
-    println!("✓ Added {} to shell profiles", dir);
+    println!("Added {} to shell profiles", dir);
     println!("  Note: Run 'source ~/.bashrc' or restart your terminal for changes to take effect");
 
     Ok(())
 }
 
+#[cfg(windows)]
 fn is_in_system_path(dir: &str) -> Result<bool> {
+    use std::process::Command;
+
+    let script = format!(
+        r#"
+        $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+        $userPath.Split(';') | ForEach-Object {{ $_.Trim() }} | Where-Object {{ $_ -eq '{}' }}
+        "#,
+        dir
+    );
+
+    let output = Command::new("powershell")
+        .args(["-Command", &script])
+        .output()?;
+
+    if !output.status.success() {
+        // Fallback to checking current process PATH
+        return check_process_path(dir);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(!stdout.trim().is_empty())
+}
+
+#[cfg(unix)]
+fn is_in_system_path(dir: &str) -> Result<bool> {
+    check_process_path(dir)
+}
+
+fn check_process_path(dir: &str) -> Result<bool> {
     if let Ok(path_var) = std::env::var("PATH") {
         let separator = if cfg!(windows) { ';' } else { ':' };
         for path_entry in path_var.split(separator) {

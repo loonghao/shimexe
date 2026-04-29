@@ -86,7 +86,7 @@ impl InitCommand {
         manager.add_shim("greet", &env_config)?;
         info!("Created example shim: greet");
 
-        println!("✓ Created example shims: hello, greet");
+        println!("[OK] Created example shims: hello, greet");
         println!("  Try running: hello");
         println!("  Try running: greet");
 

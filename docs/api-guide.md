@@ -17,7 +17,7 @@ Add shimexe to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-shimexe-core = "0.1"
+shimexe-core = "0.5"
 ```
 
 ### Simple Shim Execution
@@ -29,7 +29,7 @@ use shimexe_core::prelude::*;
 async fn main() -> Result<()> {
     // Load and run a shim
     let runner = ShimRunner::from_file("my-tool.shim.toml")?;
-    let exit_code = runner.execute(&["--help"])?;
+    let exit_code = runner.execute(&["--help".to_string()])?;
     
     println!("Process exited with code: {}", exit_code);
     Ok(())
@@ -80,14 +80,14 @@ use std::path::Path;
 pub struct JsonConfigLoader;
 
 impl ShimConfigLoader for JsonConfigLoader {
-    fn load_config<P: AsRef<Path>>(&self, path: P) -> Result<ShimConfig> {
+    fn load_config(&self, path: &Path) -> Result<ShimConfig> {
         let content = std::fs::read_to_string(path)?;
         let config: ShimConfig = serde_json::from_str(&content)
             .map_err(|e| shimexe_core::ShimError::Config(e.to_string()))?;
         Ok(config)
     }
     
-    fn save_config<P: AsRef<Path>>(&self, config: &ShimConfig, path: P) -> Result<()> {
+    fn save_config(&self, config: &ShimConfig, path: &Path) -> Result<()> {
         let content = serde_json::to_string_pretty(config)
             .map_err(|e| shimexe_core::ShimError::Config(e.to_string()))?;
         std::fs::write(path, content)?;

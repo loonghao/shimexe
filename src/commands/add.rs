@@ -135,7 +135,7 @@ impl AddCommand {
         manager.add_shim(&shim_name, &config)?;
 
         info!("Successfully added shim '{}'", shim_name);
-        println!("✓ Added shim '{}' -> {}", shim_name, actual_path);
+        println!("[OK] Added shim '{}' -> {}", shim_name, actual_path);
 
         // Add to system PATH if requested
         if self.add_system_path {

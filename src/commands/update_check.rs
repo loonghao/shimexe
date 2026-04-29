@@ -51,14 +51,14 @@ impl UpdateCheckCommand {
 
         for (name, config) in shims {
             if config.auto_update.is_some() {
-                println!("\n📦 Checking {}", name);
+                println!("\n- Checking {}", name);
                 if let Err(e) = self.check_shim_update(&name, &config, manager) {
-                    println!("  ❌ Error: {}", e);
+                    println!("  [FAILED] Error: {}", e);
                 } else {
-                    println!("  ✅ Check completed");
+                    println!("  [OK] Check completed");
                 }
             } else {
-                println!("📦 {} - Auto-update not configured", name);
+                println!("- {} - Auto-update not configured", name);
             }
         }
 
@@ -102,28 +102,28 @@ impl UpdateCheckCommand {
         rt.block_on(async {
             match updater.check_update_needed().await {
                 Ok(Some(version)) => {
-                    println!("  🔄 Update available: {}", version);
+                    println!("  [UPDATE] Update available: {}", version);
 
                     if self.install {
-                        println!("  📥 Installing update...");
+                        println!("  Installing update...");
                         match updater.update_to_version(&version).await {
                             Ok(()) => {
-                                println!("  ✅ Update installed successfully");
+                                println!("  [OK] Update installed successfully");
                                 info!("Updated '{}' to version {}", name, version);
                             }
                             Err(e) => {
-                                println!("  ❌ Update failed: {}", e);
+                                println!("  [FAILED] Update failed: {}", e);
                             }
                         }
                     } else {
-                        println!("  💡 Use --install to apply the update");
+                        println!("  Tip: Use --install to apply the update");
                     }
                 }
                 Ok(None) => {
-                    println!("  ✅ No update needed");
+                    println!("  [OK] No update needed");
                 }
                 Err(e) => {
-                    println!("  ❌ Update check failed: {}", e);
+                    println!("  [FAILED] Update check failed: {}", e);
                 }
             }
         });

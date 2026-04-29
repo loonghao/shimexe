@@ -569,12 +569,12 @@ shimexe compile my-app.shim.toml --output my-app.exe
 ```
 
 The compiled executable contains:
-- ✅ Configuration parser
-- ✅ Template engine
-- ✅ Environment variable processor
-- ✅ Process launcher
-- ✅ All template functions
-- ❌ Target executable (must exist on user system)
+- [OK] Configuration parser
+- [OK] Template engine
+- [OK] Environment variable processor
+- [OK] Process launcher
+- [OK] All template functions
+- [MISSING] Target executable (must exist on user system)
 
 ## Best Practices
 

@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/shimexe-core.svg)](https://crates.io/crates/shimexe-core)
 [![Documentation](https://docs.rs/shimexe-core/badge.svg)](https://docs.rs/shimexe-core)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE-MIT)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 
 Core library for shimexe - a modern, cross-platform executable shim manager with environment variable expansion and TOML configuration support.
 
@@ -114,4 +114,4 @@ Contributions are welcome! Please see the [main repository](../../README.md) for
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE-MIT](../../LICENSE-MIT) file for details.
+This project is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.

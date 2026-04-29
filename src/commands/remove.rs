@@ -43,7 +43,7 @@ impl RemoveCommand {
         manager.remove_shim(&self.name)?;
 
         info!("Successfully removed shim '{}'", self.name);
-        println!("✓ Removed shim '{}'", self.name);
+        println!("[OK] Removed shim '{}'", self.name);
 
         Ok(())
     }
