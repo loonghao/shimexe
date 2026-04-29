@@ -85,7 +85,7 @@ async-trait.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-zip = "4.0"
+zip = "8.0"
 anyhow = "1.0"
 
 [build-dependencies]

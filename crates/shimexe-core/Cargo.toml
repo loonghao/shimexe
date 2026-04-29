@@ -28,7 +28,7 @@ turbo-cdn = { version = "0.8.0", features = ["rustls"], default-features = false
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 futures-util = "0.3"
-zip = "4.0"
+zip = "8.0"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3.0"
 serde_json = "1.0"
