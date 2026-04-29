@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.5.16](https://github.com/loonghao/shimexe/compare/v0.5.15...v0.5.16) (2026-04-29)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate zip to v8 ([517e321](https://github.com/loonghao/shimexe/commit/517e3211a0b336419696f249156aa18d5ff3c323))
+
+
+### Documentation
+
+* cleanup README and docs, fix dead links and SOLID violations ([#156](https://github.com/loonghao/shimexe/issues/156)) ([a5b641f](https://github.com/loonghao/shimexe/commit/a5b641f8139b6d9ef3a81d803899903553c23761))
+
 ## [0.5.15](https://github.com/loonghao/shimexe/compare/v0.5.14...v0.5.15) (2026-04-29)
 
 
