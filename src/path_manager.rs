@@ -33,14 +33,14 @@ fn add_to_windows_path(dir: &str) -> Result<()> {
         return Ok(());
     }
 
-        let script = format!(
-            r#"
+    let script = format!(
+        r#"
             $currentPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
             $newPath = $currentPath + ';{}'
             [Environment]::SetEnvironmentVariable('PATH', $newPath, 'User')
             "#,
-            dir
-        );
+        dir
+    );
 
     let output = Command::new("powershell")
         .args(["-Command", &script])
