@@ -4,6 +4,23 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, info, warn};
 
+/// On Windows, detect whether shimexe was launched from a GUI (non-console)
+/// parent. When a console process (cmd.exe, PowerShell, ...) starts shimexe,
+/// it shares that console with the parent, so at least two processes are
+/// attached to it. If shimexe is the only process attached, Windows created
+/// the console just for us, which means the parent was a GUI application.
+#[cfg(windows)]
+fn launched_from_gui() -> bool {
+    extern "system" {
+        fn GetConsoleProcessList(lpdwProcessList: *mut u32, dwProcessCount: u32) -> u32;
+    }
+
+    unsafe {
+        let mut pids = [0u32; 2];
+        GetConsoleProcessList(pids.as_mut_ptr(), pids.len() as u32) <= 1
+    }
+}
+
 use crate::config::ShimConfig;
 use crate::downloader::Downloader;
 use crate::error::{Result, ShimError};
@@ -168,6 +185,19 @@ impl ShimRunner {
         cmd.stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
+
+        // On Windows, when shimexe was launched from a GUI application there is
+        // no console the user would expect to see; start the target without a
+        // window so nothing flashes on screen. From a real console the stdio
+        // handles are inherited normally and output is visible.
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            if launched_from_gui() {
+                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+                cmd.creation_flags(CREATE_NO_WINDOW);
+            }
+        }
 
         info!(
             "Executing shim '{}' -> {:?}",

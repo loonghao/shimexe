@@ -39,6 +39,19 @@ function Write-Success {
     Write-Host "[SUCCESS] $Message" -ForegroundColor Green
 }
 
+# Force TLS 1.2 so downloads work on older systems (Windows 7 / legacy .NET runtimes)
+# where TLS 1.2 is not enabled by default and GitHub rejects the connection.
+try {
+    [Net.ServicePointManager]::SecurityProtocol =
+        [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch {
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    } catch {
+        Write-Warn "Could not enable TLS 1.2; downloads may fail on this system."
+    }
+}
+
 # Detect platform and map to release naming convention
 function Get-Platform {
     $rawArch = if ($env:PROCESSOR_ARCHITEW6432) {
@@ -118,9 +131,11 @@ function Get-LatestVersion {
             # Sort by version and get the latest
             if ($shimexeReleases.Count -gt 0) {
                 $latest = $shimexeReleases | Sort-Object { $_.Version } -Descending | Select-Object -First 1
-                $version = $latest.VersionString
-                Write-Info "Found latest shimexe version: v$version"
-                return $version
+                # Return the exact release tag (e.g. "v0.5.15" or "shimexe-v0.5.15")
+                # so the download URL uses the real tag instead of a guessed prefix.
+                $tag = $latest.TagName
+                Write-Info "Found latest shimexe version: $tag"
+                return $tag
             }
 
             Write-Warn "No shimexe releases found in API response"
@@ -153,9 +168,10 @@ function Get-LatestVersion {
 
         # Extract version from page content (look for both v* and shimexe-v* patterns)
         if ($response.Content -match 'releases/tag/(shimexe-)?v([0-9]+\.[0-9]+\.[0-9]+)') {
-            $version = $matches[2]
-            Write-Info "Found shimexe version via fallback: v$version"
-            return $version
+            # Keep the full tag (e.g. "v0.5.15" or "shimexe-v0.5.15")
+            $tag = $matches[0]
+            Write-Info "Found shimexe version via fallback: $tag"
+            return $tag
         }
     }
     catch {
@@ -173,11 +189,17 @@ function Install-Shimexe {
     
     if ($Version -eq "latest") {
         Write-Info "Fetching latest version..."
-        $Version = Get-LatestVersion
-        if (-not $Version) {
+        $VersionTag = Get-LatestVersion
+        if (-not $VersionTag) {
             Write-Error "Failed to get latest version"
             exit 1
         }
+        # Normalize: accept "v0.5.15", "shimexe-v0.5.15" or bare "0.5.15"
+        $Version = $VersionTag -replace '^shimexe-v', 'v' -replace '^v', ''
+    } else {
+        # User-supplied version: normalize and derive the release tag
+        $Version = $Version -replace '^shimexe-v', 'v' -replace '^v', ''
+        $VersionTag = "v$Version"
     }
     
     Write-Info "Installing shimexe v$Version for $platform..."
@@ -192,7 +214,7 @@ function Install-Shimexe {
         $downloadUrl = $null
 
         foreach ($archiveName in $archiveCandidates) {
-            $candidateUrl = "$BaseUrl/download/v$Version/$archiveName"
+            $candidateUrl = "$BaseUrl/download/$VersionTag/$archiveName"
             $candidatePath = Join-Path $tempDir $archiveName
 
             try {

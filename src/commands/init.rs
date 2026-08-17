@@ -34,11 +34,21 @@ impl InitCommand {
         use std::collections::HashMap;
 
         // Example 1: Simple echo shim
+        // On Windows "echo" is a cmd.exe built-in, not a standalone executable,
+        // so route the example through cmd.exe there.
+        #[cfg(windows)]
+        let (echo_path, echo_args) = (
+            "cmd".to_string(),
+            vec!["/c".to_string(), "echo".to_string(), "Hello from shimexe!".to_string()],
+        );
+        #[cfg(not(windows))]
+        let (echo_path, echo_args) = ("echo".to_string(), vec!["Hello from shimexe!".to_string()]);
+
         let echo_config = ShimConfig {
             shim: ShimCore {
                 name: "hello".to_string(),
-                path: "echo".to_string(),
-                args: vec!["Hello from shimexe!".to_string()],
+                path: echo_path.clone(),
+                args: echo_args,
                 cwd: None,
                 download_url: None,
                 source_type: shimexe_core::SourceType::File,
@@ -62,11 +72,20 @@ impl InitCommand {
         let mut env_vars = HashMap::new();
         env_vars.insert("GREETING".to_string(), "Hello".to_string());
 
+        #[cfg(windows)]
+        let greet_args = vec![
+            "/c".to_string(),
+            "echo".to_string(),
+            "${GREETING:Hi} from shimexe!".to_string(),
+        ];
+        #[cfg(not(windows))]
+        let greet_args = vec!["${GREETING:Hi} from shimexe!".to_string()];
+
         let env_config = ShimConfig {
             shim: ShimCore {
                 name: "greet".to_string(),
-                path: "echo".to_string(),
-                args: vec!["${GREETING:Hi} from shimexe!".to_string()],
+                path: echo_path.clone(),
+                args: greet_args,
                 cwd: None,
                 download_url: None,
                 source_type: shimexe_core::SourceType::File,

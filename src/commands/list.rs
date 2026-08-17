@@ -9,6 +9,11 @@ pub struct ListCommand {
     /// Show detailed information
     #[arg(short, long)]
     pub detailed: bool,
+
+    /// Positional "detailed" keyword for backwards compatibility
+    /// (e.g. `shimexe list detailed`)
+    #[arg(value_name = "DETAILED", hide = true)]
+    pub keyword: Option<String>,
 }
 
 impl ListCommand {
@@ -16,12 +21,14 @@ impl ListCommand {
         let manager = ShimManager::new(shim_dir)?;
         let shims = manager.list_shims()?;
 
+        let detailed = self.detailed || self.keyword.as_deref() == Some("detailed");
+
         if shims.is_empty() {
             println!("No shims found.");
             return Ok(());
         }
 
-        if self.detailed {
+        if detailed {
             for (name, config) in shims {
                 println!("📦 {}", name);
                 println!("   Path: {}", config.shim.path);
