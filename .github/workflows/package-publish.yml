@@ -41,8 +41,10 @@ jobs:
             --github-token "${{ secrets.GITHUB_TOKEN }}" \
             --publish-scoop \
             --scoop-bucket-repo "${{ vars.SCOOP_BUCKET_REPO }}" \
+            --scoop-token "${{ secrets.SCOOP_BUCKET_TOKEN }}" \
             --publish-homebrew \
-            --homebrew-tap-repo "${{ vars.HOMEBREW_TAP_REPO }}"
+            --homebrew-tap-repo "${{ vars.HOMEBREW_TAP_REPO }}" \
+            --homebrew-token "${{ secrets.HOMEBREW_TAP_TOKEN }}"
 
       - name: Update local package files (dry run + PR)
         run: |

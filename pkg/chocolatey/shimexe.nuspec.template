@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>shimexe</id>
-    <version>{{VERSION}}</version>
+    <version>0.5.15</version>
     <packageSourceUrl>https://github.com/loonghao/shimexe</packageSourceUrl>
     <owners>loonghao</owners>
     <title>shimexe - The Modern Executable Shim Manager</title>
@@ -53,7 +53,7 @@ shimexe run uv --version
 
 For more information, visit: https://github.com/loonghao/shimexe
     ]]></description>
-    <releaseNotes>https://github.com/loonghao/shimexe/releases/tag/v{{VERSION}}</releaseNotes>
+    <releaseNotes>https://github.com/loonghao/shimexe/releases/tag/v0.5.15</releaseNotes>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
