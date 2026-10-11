@@ -95,6 +95,11 @@ jobs:
         uses: rustsec/audit-check@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # hickory-proto 0.25.2 -> 0.26.x is the only fix, and hickory reaches
+          # the tree through hickory-resolver, pulled in by reqwest 0.13.3 and
+          # turbo-cdn 0.8.3, both already at their newest compatible release.
+          # Revisit when a reqwest or turbo-cdn update carries hickory 0.26.
+          ignore: RUSTSEC-2026-0118,RUSTSEC-2026-0119
 
   # Formatting check
   rustfmt:
