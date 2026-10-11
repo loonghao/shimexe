@@ -39,7 +39,11 @@ impl InitCommand {
         #[cfg(windows)]
         let (echo_path, echo_args) = (
             "cmd".to_string(),
-            vec!["/c".to_string(), "echo".to_string(), "Hello from shimexe!".to_string()],
+            vec![
+                "/c".to_string(),
+                "echo".to_string(),
+                "Hello from shimexe!".to_string(),
+            ],
         );
         #[cfg(not(windows))]
         let (echo_path, echo_args) = ("echo".to_string(), vec!["Hello from shimexe!".to_string()]);

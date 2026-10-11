@@ -2226,7 +2226,7 @@ dependencies = [
 
 [[package]]
 name = "shimexe"
-version = "0.5.19"
+version = "0.5.15"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2245,7 +2245,7 @@ dependencies = [
 
 [[package]]
 name = "shimexe-core"
-version = "0.5.16"
+version = "0.5.15"
 dependencies = [
  "anyhow",
  "async-trait",
