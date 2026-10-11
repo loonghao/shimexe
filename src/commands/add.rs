@@ -46,6 +46,7 @@ pub struct AddCommand {
     pub add_system_path: bool,
 }
 
+#[allow(clippy::double_must_use)]
 #[async_trait]
 trait DownloadService {
     async fn download_archive(

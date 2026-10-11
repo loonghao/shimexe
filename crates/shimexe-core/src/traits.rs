@@ -28,6 +28,9 @@ pub trait ShimConfigLoader: Send + Sync {
 }
 
 /// Trait for custom shim runners
+// `async_trait` re-emits `#[must_use]` on the boxed future, which the return
+// type already carries.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait ShimRunnerTrait {
     /// Execute the shim with additional arguments
@@ -51,6 +54,7 @@ pub trait ShimRunnerTrait {
 }
 
 /// Trait for custom update providers
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait UpdateProvider: Send + Sync {
     /// Check if an update is available
@@ -70,6 +74,7 @@ pub trait UpdateProvider: Send + Sync {
 }
 
 /// Trait for custom version checkers
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait VersionChecker: Send + Sync {
     /// Get the latest available version
